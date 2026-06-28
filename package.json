@@ -1,0 +1,16 @@
+{
+  "name": "ltc-care-report",
+  "version": "2.0.0",
+  "description": "ระบบรายงานการดูแลผู้สูงอายุและผู้พึ่งพิง (NHSO LTC) — Google Apps Script backend + GitHub Pages frontend",
+  "private": true,
+  "scripts": {
+    "build": "node build-web.js",
+    "push": "clasp push --force",
+    "deploy:gas": "clasp deploy -i AKfycbwUqBMch6-fVD31Ngm-9eTNzawK6oUNodUFM5VhlTZ6Fb-lg6IfWoneAWwfz3UkyW6u -d \"release\"",
+    "backend": "npm run push && npm run deploy:gas",
+    "release": "npm run push && npm run deploy:gas && npm run build",
+    "pages": "npm run build && git add docs && git commit -m \"chore: rebuild static frontend\" && git push"
+  },
+  "keywords": ["ltc", "nhso", "google-apps-script", "clasp", "github-pages"],
+  "license": "MIT"
+}
