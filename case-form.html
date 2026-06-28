@@ -1,0 +1,629 @@
+<!-- ============================================================
+     case-form.html — Patient (Case) Management Form
+     ============================================================ -->
+<div x-data="caseForm()" x-init="init()">
+
+  <!-- ── Header ── -->
+  <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+    <div>
+      <h1 class="text-xl sm:text-2xl font-bold text-slate-800">👥 ผู้รับบริการ</h1>
+      <p class="text-xs text-slate-500 mt-0.5">
+        ทั้งหมด <span class="font-semibold" x-text="patients.length"></span> ราย
+        · กรองอยู่ <span class="font-semibold text-primary-700" x-text="filtered.length"></span> ราย
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <button @click="loadPatients()" class="btn btn-secondary btn-sm" :disabled="loading">🔄</button>
+      <button @click="openAdd()" class="btn btn-primary btn-sm" x-show="canCreate">+ เพิ่มผู้รับบริการ</button>
+    </div>
+  </div>
+
+  <!-- ── Search bar ── -->
+  <div class="card mb-4 p-3">
+    <div class="flex gap-2 items-center">
+      <div class="flex-1 relative">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+        <input type="text" x-model="search" @input.debounce.300ms="applyFilter()"
+               class="form-input pl-10" placeholder="ค้นหาชื่อ / CID / HN / หมู่บ้าน...">
+      </div>
+      <button @click="search=''; applyFilter()" x-show="search" class="btn btn-secondary btn-sm">✕</button>
+    </div>
+  </div>
+
+  <!-- ── Loading ── -->
+  <div x-show="loading">
+    <template x-for="i in 5">
+      <div class="skeleton h-20 mb-2 rounded-2xl"></div>
+    </template>
+  </div>
+
+  <!-- ── Patient List (mobile cards + desktop table) ── -->
+  <div x-show="!loading && filtered.length">
+    <!-- Mobile cards -->
+    <div class="md:hidden space-y-2">
+      <template x-for="p in filtered" :key="p.PatientID">
+        <div class="card p-3" @click="openDetail(p)">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0"
+                 :class="p.Sex==='หญิง'?'bg-pink-400':'bg-primary-500'"
+                 x-text="(p.FullName||'?').substring(0,1)"></div>
+            <div class="flex-1 min-w-0">
+              <div class="font-semibold text-slate-800 truncate" x-text="p.FullName"></div>
+              <div class="text-xs text-slate-500 mt-0.5">
+                HN: <span x-text="p.HN||'-'"></span> · <span x-text="p.Age||'-'"></span> ปี · <span x-text="p.Sex||'-'"></span>
+              </div>
+              <div class="text-xs text-slate-400 mt-0.5 font-mono" x-text="p.CIDMasked||p.CID||'-'"></div>
+              <div class="flex flex-wrap gap-1 mt-2">
+                <span x-show="p.TAIGroup" class="badge" :class="taiBadge(p.TAIGroup)" x-text="p.TAIGroup"></span>
+                <span x-show="p.ADLScore!==''" class="badge badge-blue" x-text="'ADL '+p.ADLScore+'/20'"></span>
+                <span x-show="p.VillageName||p.VillageNo" class="badge badge-gray"
+                      x-text="(p.VillageName||('ม.'+p.VillageNo))"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Desktop table -->
+    <div class="hidden md:block card p-0 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 text-slate-600">
+            <tr>
+              <th class="text-left px-4 py-3">ชื่อ-นามสกุล</th>
+              <th class="text-left px-4 py-3">HN</th>
+              <th class="text-left px-4 py-3">CID (Masked)</th>
+              <th class="text-center px-4 py-3">อายุ/เพศ</th>
+              <th class="text-left px-4 py-3">หมู่บ้าน</th>
+              <th class="text-center px-4 py-3">TAI / ADL</th>
+              <th class="text-left px-4 py-3">CG/CM</th>
+              <th class="text-center px-4 py-3">การจัดการ</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            <template x-for="p in filtered" :key="p.PatientID">
+              <tr class="hover:bg-slate-50">
+                <td class="px-4 py-3 font-medium" x-text="p.FullName"></td>
+                <td class="px-4 py-3 font-mono text-xs" x-text="p.HN||'-'"></td>
+                <td class="px-4 py-3 font-mono text-xs text-slate-500" x-text="p.CIDMasked||p.CID||'-'"></td>
+                <td class="px-4 py-3 text-center" x-text="(p.Age||'-')+' / '+(p.Sex||'-')"></td>
+                <td class="px-4 py-3 text-xs" x-text="p.VillageName||('ม.'+(p.VillageNo||'-'))"></td>
+                <td class="px-4 py-3 text-center">
+                  <div x-show="p.TAIGroup"><span class="badge" :class="taiBadge(p.TAIGroup)" x-text="p.TAIGroup"></span></div>
+                  <div x-show="p.ADLScore!==''" class="text-xs text-slate-400 mt-0.5" x-text="'ADL '+p.ADLScore"></div>
+                </td>
+                <td class="px-4 py-3 text-xs text-slate-500">
+                  <div>CM: <span x-text="userName(p.CareManagerID)||'-'"></span></div>
+                  <div>CG: <span x-text="userName(p.CaregiverID)||'-'"></span></div>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <button @click="openDetail(p)" class="btn btn-outline btn-sm">📋 ดู</button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Empty ── -->
+  <div x-show="!loading && !filtered.length" class="empty-state">
+    <div class="icon">📭</div>
+    <p x-show="search">ไม่พบผู้รับบริการที่ตรงกับ "<span x-text="search"></span>"</p>
+    <p x-show="!search">ยังไม่มีผู้รับบริการในระบบ</p>
+    <button x-show="canCreate" @click="openAdd()" class="btn btn-primary mt-4">+ เพิ่มผู้รับบริการ</button>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- ── ADD/EDIT MODAL ────────────────────────────────────── -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <div x-show="showForm" x-cloak
+       class="fixed inset-0 bg-black/50 z-40 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
+       @click.self="closeForm()">
+    <div class="bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl shadow-2xl max-h-[95vh] flex flex-col">
+
+      <div class="px-5 py-4 border-b flex items-center justify-between sticky top-0 bg-white rounded-t-2xl">
+        <h3 class="font-bold text-slate-800" x-text="editingId ? '✏️ แก้ไขข้อมูลผู้รับบริการ' : '➕ เพิ่มผู้รับบริการใหม่'"></h3>
+        <button @click="closeForm()" class="text-2xl text-slate-400 hover:text-slate-700">&times;</button>
+      </div>
+
+      <form @submit.prevent="submitForm()" class="overflow-y-auto p-5 flex-1 space-y-5">
+
+        <!-- Section: ข้อมูลส่วนตัว -->
+        <div>
+          <div class="section-title">👤 ข้อมูลส่วนตัว</div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="sm:col-span-2">
+              <label class="form-label">ชื่อ-นามสกุล <span class="text-red-500">*</span></label>
+              <input type="text" x-model="form.FullName" class="form-input" required>
+            </div>
+            <div>
+              <label class="form-label">เพศ <span class="text-red-500">*</span></label>
+              <select x-model="form.Sex" class="form-input" required>
+                <option value="">-- เลือก --</option>
+                <option>ชาย</option><option>หญิง</option><option>อื่นๆ</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">วันเดือนปีเกิด</label>
+              <input type="date" x-model="form.BirthDate" class="form-input">
+              <p x-show="form.BirthDate" class="text-xs text-slate-400 mt-1">
+                อายุ <span class="font-semibold text-primary-700" x-text="calcAge(form.BirthDate)"></span> ปี
+              </p>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="form-label">เลขบัตรประชาชน (13 หลัก)</label>
+              <div class="flex gap-2 items-start">
+                <input type="text" x-model="form.CID" @input="validateCIDLive()"
+                       maxlength="13" pattern="[0-9]*" inputmode="numeric"
+                       class="form-input font-mono" placeholder="1234567890123">
+                <button type="button" @click="validateCIDLive(true)" class="btn btn-secondary btn-sm flex-shrink-0">ตรวจสอบ</button>
+              </div>
+              <p x-show="cidStatus.msg" class="text-xs mt-1"
+                 :class="cidStatus.valid?'text-green-600':'text-red-600'"
+                 x-text="cidStatus.msg"></p>
+            </div>
+            <div>
+              <label class="form-label">HN</label>
+              <input type="text" x-model="form.HN" class="form-input">
+            </div>
+            <div>
+              <label class="form-label">โทรศัพท์ผู้ป่วย</label>
+              <input type="tel" x-model="form.Phone" class="form-input" placeholder="08x-xxx-xxxx">
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: ที่อยู่ + GPS -->
+        <div>
+          <div class="section-title">📍 ที่อยู่และพิกัด</div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="sm:col-span-2">
+              <label class="form-label">บ้านเลขที่/ซอย/ถนน</label>
+              <input type="text" x-model="form.Address" class="form-input">
+            </div>
+            <div>
+              <label class="form-label">หมู่ที่</label>
+              <input type="text" x-model="form.VillageNo" class="form-input">
+            </div>
+            <div>
+              <label class="form-label">ชื่อหมู่บ้าน</label>
+              <input type="text" x-model="form.VillageName" class="form-input">
+            </div>
+            <div>
+              <label class="form-label">ตำบล</label>
+              <input type="text" x-model="form.Subdistrict" class="form-input">
+            </div>
+            <div>
+              <label class="form-label">อำเภอ</label>
+              <input type="text" x-model="form.District" class="form-input">
+            </div>
+            <div>
+              <label class="form-label">จังหวัด</label>
+              <input type="text" x-model="form.Province" class="form-input">
+            </div>
+            <div></div>
+            <div>
+              <label class="form-label">Latitude (พิกัด)</label>
+              <input type="text" x-model="form.Latitude" class="form-input font-mono text-sm" placeholder="13.736717">
+            </div>
+            <div>
+              <label class="form-label">Longitude (พิกัด)</label>
+              <input type="text" x-model="form.Longitude" class="form-input font-mono text-sm" placeholder="100.523186">
+            </div>
+            <div class="sm:col-span-2">
+              <button type="button" @click="captureGPS()" class="btn btn-outline w-full">
+                📍 บันทึกพิกัด GPS อัตโนมัติ
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: ผู้ดูแลและสุขภาพ -->
+        <div>
+          <div class="section-title">🏥 ข้อมูลการดูแล LTC</div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="form-label">สิทธิ์การรักษา</label>
+              <select x-model="form.RightType" class="form-input">
+                <option value="">-- เลือก --</option>
+                <option>สิทธิ์บัตรทอง (UC)</option>
+                <option>ประกันสังคม</option>
+                <option>ข้าราชการ</option>
+                <option>ชำระเอง</option>
+                <option>อื่นๆ</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">ผู้ดูแลหลัก (ครอบครัว)</label>
+              <input type="text" x-model="form.MainCaregiverName" class="form-input">
+            </div>
+            <div>
+              <label class="form-label">เบอร์โทรผู้ดูแลหลัก</label>
+              <input type="tel" x-model="form.MainCaregiverPhone" class="form-input">
+            </div>
+            <div>
+              <label class="form-label">ความสัมพันธ์</label>
+              <input type="text" x-model="form.Relationship" class="form-input" placeholder="บุตร / ภรรยา / ลูกสะใภ้">
+            </div>
+            <div class="sm:col-span-2">
+              <label class="form-label">โรคประจำตัว / Disease</label>
+              <textarea x-model="form.Disease" rows="2" class="form-input" placeholder="เช่น เบาหวาน, ความดันสูง, อัมพฤกษ์ ซีกซ้าย"></textarea>
+            </div>
+            <div>
+              <label class="form-label">👨‍⚕️ Care Manager (CM)</label>
+              <select x-model="form.CareManagerID" class="form-input">
+                <option value="">-- เลือก --</option>
+                <template x-for="u in usersList.filter(u=>u.role==='cm'||u.role==='admin')" :key="u.userId">
+                  <option :value="u.userId" x-text="u.fullName"></option>
+                </template>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">👩‍⚕️ Caregiver (CG)</label>
+              <select x-model="form.CaregiverID" class="form-input">
+                <option value="">-- เลือก --</option>
+                <template x-for="u in usersList.filter(u=>u.role==='cg')" :key="u.userId">
+                  <option :value="u.userId" x-text="u.fullName"></option>
+                </template>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">วันที่ลงทะเบียน</label>
+              <input type="date" x-model="form.RegisterDate" class="form-input">
+            </div>
+            <div>
+              <label class="form-label">สถานะ</label>
+              <select x-model="form.Status" class="form-input">
+                <option value="active">ใช้งานอยู่</option>
+                <option value="discharged">ออกจากระบบ</option>
+                <option value="deceased">เสียชีวิต</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- PDPA Consent (บังคับสำหรับเพิ่มผู้ป่วยใหม่) -->
+        <div x-show="!editingId">
+          <label class="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-xl p-3 cursor-pointer">
+            <input type="checkbox" x-model="pdpaConsent" class="mt-0.5 w-5 h-5 accent-primary-600">
+            <span class="text-xs text-blue-900">
+              <b>ความยินยอมตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล (PDPA):</b>
+              ข้าพเจ้าได้รับความยินยอมจากผู้รับบริการ/ผู้แทนโดยชอบธรรม ในการเก็บรวบรวม ใช้
+              และประมวลผลข้อมูลส่วนบุคคลและข้อมูลสุขภาพ เพื่อการดูแลตามสิทธิประโยชน์ LTC เท่านั้น
+            </span>
+          </label>
+        </div>
+
+        <div class="flex gap-2 justify-end pt-4 border-t">
+          <button type="button" @click="closeForm()" class="btn btn-secondary">ยกเลิก</button>
+          <button type="submit" class="btn btn-primary" :disabled="saving">
+            <span x-text="saving ? 'กำลังบันทึก...' : '💾 บันทึก'"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- ── DETAIL + TIMELINE MODAL ───────────────────────────── -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <div x-show="showDetail" x-cloak
+       class="fixed inset-0 bg-black/50 z-40 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
+       @click.self="closeDetail()">
+    <div class="bg-white w-full sm:max-w-3xl sm:rounded-2xl rounded-t-2xl shadow-2xl max-h-[95vh] flex flex-col">
+      <div class="px-5 py-4 border-b flex items-center justify-between sticky top-0 bg-white rounded-t-2xl">
+        <div>
+          <h3 class="font-bold text-slate-800" x-text="detail?.patient?.FullName||'-'"></h3>
+          <p class="text-xs text-slate-500 mt-0.5">
+            HN: <span x-text="detail?.patient?.HN||'-'"></span> ·
+            <span x-text="detail?.patient?.Age||'-'"></span> ปี ·
+            <span x-text="detail?.patient?.Sex||'-'"></span>
+          </p>
+        </div>
+        <div class="flex gap-2">
+          <button x-show="canCreate" @click="openEdit(detail.patient)" class="btn btn-outline btn-sm">✏️ แก้ไข</button>
+          <button @click="closeDetail()" class="text-2xl text-slate-400 hover:text-slate-700 px-2">&times;</button>
+        </div>
+      </div>
+
+      <div class="overflow-y-auto p-5 flex-1">
+        <!-- Patient summary -->
+        <div class="grid grid-cols-2 gap-3 mb-5">
+          <div class="bg-slate-50 rounded-xl p-3">
+            <div class="text-xs text-slate-500">CID</div>
+            <div class="font-mono text-sm font-semibold" x-text="detail?.patient?.CIDMasked||detail?.patient?.CID||'-'"></div>
+          </div>
+          <div class="bg-slate-50 rounded-xl p-3">
+            <div class="text-xs text-slate-500">โทรศัพท์</div>
+            <div class="font-mono text-sm font-semibold" x-text="detail?.patient?.Phone||'-'"></div>
+          </div>
+          <div class="bg-blue-50 rounded-xl p-3">
+            <div class="text-xs text-slate-500">ADL Score</div>
+            <div class="font-bold text-blue-700" x-text="(detail?.patient?.ADLScore||'-')+' / 20'"></div>
+          </div>
+          <div class="bg-purple-50 rounded-xl p-3">
+            <div class="text-xs text-slate-500">TAI Group</div>
+            <div class="font-bold text-purple-700 text-sm" x-text="detail?.patient?.TAIGroup||'ยังไม่ประเมิน'"></div>
+          </div>
+        </div>
+        <div class="mb-4 p-3 rounded-xl bg-slate-50">
+          <div class="text-xs text-slate-500 mb-1">📍 ที่อยู่</div>
+          <div class="text-sm" x-text="patientAddress(detail?.patient)"></div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="section-title">📜 ประวัติการดูแล (Timeline)</div>
+        <div x-show="!detail?.timeline?.length" class="empty-state">
+          <div class="icon">⏳</div>
+          <p>ยังไม่มีประวัติการดูแล</p>
+        </div>
+        <div class="relative space-y-3" x-show="detail?.timeline?.length">
+          <template x-for="e in detail.timeline" :key="e.id">
+            <div class="flex gap-3 items-start">
+              <div class="w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0"
+                   :class="timelineColor(e.type)" x-text="timelineIcon(e.type)"></div>
+              <div class="flex-1 bg-slate-50 rounded-xl p-3 min-w-0">
+                <div class="flex items-center justify-between gap-2 flex-wrap">
+                  <span class="font-semibold text-sm text-slate-800" x-text="e.title"></span>
+                  <span class="text-xs text-slate-500" x-text="formatThaiDate(e.date)"></span>
+                </div>
+                <div x-show="e.summary" class="text-xs text-slate-600 mt-1" x-text="e.summary"></div>
+                <div x-show="e.visitorName" class="text-xs text-slate-400 mt-1">
+                  ผู้บันทึก: <span x-text="e.visitorName"></span>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function caseForm() {
+  return {
+    // ── State ──
+    patients: [], filtered: [],
+    usersList: [],
+    search: '',
+    loading: true,
+    showForm: false,
+    showDetail: false,
+    editingId: null,
+    saving: false,
+    form: this.blankForm(),
+    cidStatus: { valid: null, msg: '' },
+    pdpaConsent: false,
+    detail: null,
+
+    blankForm() {
+      return {
+        FullName:'', Sex:'', BirthDate:'', CID:'', HN:'', Phone:'',
+        Address:'', VillageNo:'', VillageName:'', Subdistrict:'', District:'', Province:'',
+        Latitude:'', Longitude:'',
+        RightType:'', MainCaregiverName:'', MainCaregiverPhone:'', Relationship:'',
+        Disease:'', CareManagerID:'', CaregiverID:'',
+        RegisterDate:'', Status:'active'
+      };
+    },
+
+    get canCreate() {
+      const r = this.$root.user?.role;
+      return r === 'admin' || r === 'cm';
+    },
+
+    async init() {
+      await Promise.all([this.loadPatients(), this.loadUsers()]);
+    },
+
+    async loadPatients() {
+      this.loading = true;
+      try {
+        const r = await rpc('api_getPatients', this.$root.token, {});
+        if (!r.success) { showError(r.message); return; }
+        this.patients = r.data || [];
+        this.applyFilter();
+      } catch (e) {
+        showError(e.message || 'โหลดรายชื่อไม่สำเร็จ');
+      } finally { this.loading = false; }
+    },
+
+    async loadUsers() {
+      try {
+        const r = await rpc('api_getCaregivers', this.$root.token);
+        if (r.success) this.usersList = r.data || [];
+      } catch (e) {}
+    },
+
+    applyFilter() {
+      const q = (this.search || '').trim().toLowerCase();
+      if (!q) { this.filtered = [...this.patients]; return; }
+      this.filtered = this.patients.filter(p => {
+        return (p.FullName && p.FullName.toLowerCase().includes(q)) ||
+               (p.HN && String(p.HN).toLowerCase().includes(q)) ||
+               (p.VillageName && p.VillageName.toLowerCase().includes(q)) ||
+               (String(p.VillageNo||'').toLowerCase().includes(q)) ||
+               (String(p.CID||'').includes(q));
+      });
+    },
+
+    openAdd() {
+      this.editingId = null;
+      this.form = this.blankForm();
+      this.form.RegisterDate = new Date().toISOString().split('T')[0];
+      this.cidStatus = { valid:null, msg:'' };
+      this.pdpaConsent = false;
+      this.showForm = true;
+    },
+
+    openEdit(p) {
+      this.editingId = p.PatientID;
+      this.form = {
+        FullName: p.FullName||'', Sex: p.Sex||'',
+        BirthDate: (p.BirthDate||'').split('T')[0],
+        CID:'', HN: p.HN||'', Phone: p.Phone||'', // CID ไม่ส่งกลับ (masked) — เว้นไว้
+        Address: p.Address||'', VillageNo: p.VillageNo||'', VillageName: p.VillageName||'',
+        Subdistrict: p.Subdistrict||'', District: p.District||'', Province: p.Province||'',
+        Latitude: p.Latitude||'', Longitude: p.Longitude||'',
+        RightType: p.RightType||'',
+        MainCaregiverName: p.MainCaregiverName||'', MainCaregiverPhone: p.MainCaregiverPhone||'',
+        Relationship: p.Relationship||'',
+        Disease: p.Disease||'',
+        CareManagerID: p.CareManagerID||'', CaregiverID: p.CaregiverID||'',
+        RegisterDate: (p.RegisterDate||'').split('T')[0],
+        Status: p.Status||'active'
+      };
+      this.cidStatus = { valid:null, msg:'(เลข CID ถูกซ่อนเพื่อความปลอดภัย เว้นว่างหากไม่ต้องการเปลี่ยน)' };
+      this.showDetail = false;
+      this.showForm = true;
+    },
+
+    closeForm() { this.showForm = false; },
+
+    async validateCIDLive(showResult) {
+      const cid = String(this.form.CID || '').replace(/\D/g, '');
+      this.form.CID = cid;
+      if (cid.length === 0) { this.cidStatus = { valid:null, msg:'' }; return; }
+      if (cid.length !== 13) {
+        this.cidStatus = { valid:false, msg:'CID ต้องมี 13 หลัก (ปัจจุบัน '+cid.length+')' };
+        return;
+      }
+      try {
+        const r = await rpc('api_validateCID', cid);
+        this.cidStatus = {
+          valid: r.data?.valid,
+          msg: r.data?.valid ? '✓ เลขบัตรประชาชนถูกต้อง' : (r.message || 'CID ไม่ถูกต้อง')
+        };
+        if (showResult && r.data?.valid) showSuccess('CID ถูกต้อง');
+      } catch (e) {
+        this.cidStatus = { valid:false, msg:'ตรวจสอบไม่สำเร็จ' };
+      }
+    },
+
+    async captureGPS() {
+      if (!navigator.geolocation) { showError('Browser นี้ไม่รองรับ GPS'); return; }
+      Swal.fire({ title:'📍 กำลังขอตำแหน่ง...', didOpen:()=>Swal.showLoading(), allowOutsideClick:false });
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          this.form.Latitude = pos.coords.latitude.toFixed(6);
+          this.form.Longitude = pos.coords.longitude.toFixed(6);
+          Swal.fire({ icon:'success', title:'บันทึกพิกัดแล้ว',
+                      html:`Lat: <b>${this.form.Latitude}</b><br>Lng: <b>${this.form.Longitude}</b>`,
+                      confirmButtonText:'ตกลง' });
+        },
+        err => Swal.fire({ icon:'error', title:'ไม่สามารถรับ GPS ได้', text: err.message }),
+        { enableHighAccuracy: true, timeout: 15000 }
+      );
+    },
+
+    async submitForm() {
+      // Validate
+      if (!this.form.FullName || !this.form.Sex) {
+        showError('กรุณากรอกชื่อ-นามสกุล และเพศ'); return;
+      }
+      if (this.form.CID && this.cidStatus.valid === false) {
+        showError('เลขบัตรประชาชนไม่ถูกต้อง'); return;
+      }
+      // PDPA consent บังคับสำหรับผู้ป่วยใหม่
+      if (!this.editingId && !this.pdpaConsent) {
+        showError('กรุณายืนยันความยินยอม PDPA ก่อนบันทึกข้อมูลผู้รับบริการ'); return;
+      }
+      // Confirm
+      const ok = await showConfirm(
+        this.editingId ? 'บันทึกการแก้ไข?' : 'เพิ่มผู้รับบริการใหม่?',
+        'ชื่อ: ' + this.form.FullName
+      );
+      if (!ok) return;
+
+      this.saving = true;
+      try {
+        // ── ตัดฟิลด์ CID ออกถ้าว่าง (กรณีแก้ไข — เพื่อไม่ overwrite) ──
+        const payload = { ...this.form };
+        if (this.editingId && !payload.CID) delete payload.CID;
+
+        const fn = this.editingId ? 'api_updatePatient' : 'api_savePatient';
+        const args = this.editingId
+          ? [this.$root.token, this.editingId, payload]
+          : [this.$root.token, payload];
+        const r = await rpc(fn, ...args);
+        if (!r.success) { showError(r.message); return; }
+        showSuccess(r.message || 'บันทึกสำเร็จ');
+        this.showForm = false;
+        await this.loadPatients();
+      } catch (e) {
+        showError(e.message || 'บันทึกไม่สำเร็จ');
+      } finally { this.saving = false; }
+    },
+
+    async openDetail(p) {
+      this.detail = { patient: p, timeline: [] };
+      this.showDetail = true;
+      try {
+        const r = await rpc('api_getPatientTimeline', this.$root.token, p.PatientID);
+        if (r.success) this.detail = r.data;
+      } catch (e) {
+        showError(e.message || 'โหลด timeline ไม่สำเร็จ');
+      }
+    },
+
+    closeDetail() { this.showDetail = false; this.detail = null; },
+
+    // ── Helpers ──
+    calcAge(birthDate) {
+      if (!birthDate) return '-';
+      const d = new Date(birthDate);
+      if (isNaN(d)) return '-';
+      const t = new Date();
+      let a = t.getFullYear() - d.getFullYear();
+      const m = t.getMonth() - d.getMonth();
+      if (m < 0 || (m === 0 && t.getDate() < d.getDate())) a--;
+      return a;
+    },
+
+    userName(id) {
+      if (!id) return '';
+      const u = this.usersList.find(x => x.userId === id);
+      return u ? u.fullName : '-';
+    },
+
+    taiBadge(group) {
+      const g = String(group||'');
+      if (g.includes('1')) return 'badge-green';
+      if (g.includes('2')) return 'badge-yellow';
+      if (g.includes('3')) return 'badge-orange';
+      if (g.includes('4')) return 'badge-red';
+      return 'badge-gray';
+    },
+
+    timelineIcon(type) {
+      return ({ careplan:'📋', visit:'🚪', vital:'💓', adl:'🧩',
+                ppsa:'🛏️', mental:'🧠', benefit:'✅' })[type] || '📌';
+    },
+    timelineColor(type) {
+      return ({
+        careplan:'bg-primary-50 text-primary-700',
+        visit:'bg-accent-50 text-accent-700',
+        vital:'bg-pink-50 text-pink-700',
+        adl:'bg-yellow-50 text-yellow-700',
+        ppsa:'bg-purple-50 text-purple-700',
+        mental:'bg-red-50 text-red-700',
+        benefit:'bg-blue-50 text-blue-700'
+      })[type] || 'bg-slate-100 text-slate-700';
+    },
+
+    patientAddress(p) {
+      if (!p) return '-';
+      return [p.Address, p.VillageName ? '('+p.VillageName+')' : '',
+              p.VillageNo ? 'ม.'+p.VillageNo : '', p.Subdistrict ? 'ต.'+p.Subdistrict : '',
+              p.District ? 'อ.'+p.District : '', p.Province ? 'จ.'+p.Province : '']
+              .filter(s => s).join(' ') || '-';
+    },
+
+    formatThaiDate(iso) { return this.$root.formatThaiDate(iso); }
+  };
+}
+</script>

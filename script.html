@@ -1,0 +1,312 @@
+<script>
+/* ============================================================
+   LTC Care Report — Frontend Controller (Phase 5)
+   ============================================================ */
+
+/**
+ * rpc(name, ...args) — เรียก backend แบบ dual-mode
+ *  • ถ้า window.LTC_API_URL ถูกตั้ง (host บน GitHub Pages) → เรียก GAS REST API ผ่าน fetch
+ *  • ถ้าไม่ตั้ง (host ภายใน GAS เอง) → ใช้ google.script.run เหมือนเดิม
+ * คืน Promise ที่ resolve เป็น { success, data, message }
+ */
+function rpc(name, ...args) {
+  // ── Mode A: REST (GitHub Pages / external) ──
+  if (typeof window !== 'undefined' && window.LTC_API_URL) {
+    return fetch(window.LTC_API_URL, {
+      method: 'POST',
+      // text/plain = simple request → เลี่ยง CORS preflight ที่ GAS ตอบไม่ได้
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'invoke',
+        fn: name,
+        args: args,
+        apiKey: window.LTC_API_KEY || undefined
+      })
+    })
+    .then(res => {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .catch(err => ({ success: false, data: null, message: 'เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ: ' + (err && err.message ? err.message : err) }));
+  }
+
+  // ── Mode B: google.script.run (hosted inside GAS) ──
+  return new Promise((resolve, reject) => {
+    if (typeof google === 'undefined' || !google.script || !google.script.run) {
+      reject(new Error('Google Apps Script ไม่พร้อมใช้งาน'));
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(err => reject(err instanceof Error ? err : new Error(String(err))))
+      [name](...args);
+  });
+}
+
+/** showSuccess(message) — แสดง toast แบบสำเร็จ */
+function showSuccess(message) {
+  Swal.fire({
+    toast: true, position: 'top-end', icon: 'success',
+    title: message || 'สำเร็จ',
+    showConfirmButton: false, timer: 2500, timerProgressBar: true
+  });
+}
+
+/** showError(message) — แสดง dialog แบบผิดพลาด */
+function showError(message) {
+  Swal.fire({
+    icon: 'error', title: 'เกิดข้อผิดพลาด',
+    text: message || 'ไม่ทราบสาเหตุ', confirmButtonColor: '#1d4ed8',
+    confirmButtonText: 'ตกลง'
+  });
+}
+
+/** showConfirm(title, text) — dialog ยืนยัน */
+function showConfirm(title, text) {
+  return Swal.fire({
+    title: title || 'ยืนยัน?', text: text || '',
+    icon: 'question', showCancelButton: true,
+    confirmButtonText: 'ตกลง', cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#1d4ed8', cancelButtonColor: '#64748b'
+  }).then(r => r.isConfirmed);
+}
+
+// ============================================================
+// ── Main App (Alpine.js) ────────────────────────────────────
+// ============================================================
+function app() {
+  return {
+    // ── State ──
+    user: null,
+    token: null,
+    appConfig: {},
+    page: 'dashboard',
+    loading: false,
+    loadingText: 'กำลังโหลด...',
+
+    // ── Login ──
+    loginForm: { username: '', password: '' },
+    loginError: '',
+    loginLoading: false,
+    showPass: false,
+
+    // ── Navigation ──
+    navItems: [
+      { page:'dashboard',   label:'หน้าหลัก',         shortLabel:'หลัก',     icon:'📊', bottom:true,  roles:['admin','cm','cg','viewer'] },
+      { page:'patients',    label:'ผู้รับบริการ',      shortLabel:'ผู้ป่วย',  icon:'👥', bottom:true,  roles:['admin','cm','cg','viewer'] },
+      { page:'visits',      label:'การเยี่ยมบ้าน',     shortLabel:'เยี่ยม',  icon:'🚪', bottom:true,  roles:['admin','cm','cg'] },
+      { page:'assessment',  label:'แบบประเมิน',       shortLabel:'ประเมิน',  icon:'📋', bottom:true,  roles:['admin','cm','cg'] },
+      { page:'map',         label:'แผนที่เคส',         shortLabel:'แผนที่',   icon:'🗺️', bottom:false, roles:['admin','cm','cg','viewer'] },
+      { page:'reports',     label:'รายงาน',           shortLabel:'รายงาน',   icon:'📈', bottom:false, roles:['admin','cm','viewer'] },
+      { page:'settings',    label:'การตั้งค่า',       shortLabel:'ตั้งค่า',  icon:'⚙️', bottom:false, roles:['admin','cm','cg','viewer'] },
+    ],
+
+    // ── Dashboard ──
+    dashboard: null,
+    dashboardLoading: true,
+    dashboardError: '',
+    filter: {
+      dateFrom: '', dateTo: '',
+      village: '', careManagerId: '', caregiverId: '', status: ''
+    },
+
+    // ============================================================
+    // ── Init / Auth ─────────────────────────────────────────────
+    // ============================================================
+    async init() {
+      // โหลด appConfig (ไม่ต้อง auth)
+      try {
+        const r = await rpc('api_getAppConfig');
+        if (r.success) this.appConfig = r.data.settings || {};
+      } catch (e) { /* silent */ }
+
+      // ตรวจ session เดิม
+      const saved = sessionStorage.getItem('ltc_token');
+      if (saved) {
+        this.token = saved;
+        try {
+          const r = await rpc('api_getCurrentUser', saved);
+          if (r.success && r.data) {
+            this.user = r.data;
+            await this.loadDashboard();
+          } else {
+            this.clearSession();
+          }
+        } catch (e) {
+          this.clearSession();
+        }
+      }
+    },
+
+    async doLogin() {
+      this.loginError = '';
+      this.loginLoading = true;
+      try {
+        const r = await rpc('api_login', this.loginForm.username, this.loginForm.password);
+        if (!r.success) { this.loginError = r.message; return; }
+        this.token = r.data.token;
+        this.user  = r.data.user;
+        sessionStorage.setItem('ltc_token', this.token);
+        showSuccess('เข้าสู่ระบบสำเร็จ');
+        await this.loadDashboard();
+      } catch (e) {
+        this.loginError = (e && e.message) ? e.message : 'เข้าสู่ระบบไม่สำเร็จ';
+      } finally {
+        this.loginLoading = false;
+      }
+    },
+
+    async logout() {
+      const ok = await showConfirm('ออกจากระบบ?', 'ท่านต้องการออกจากระบบใช่หรือไม่?');
+      if (!ok) return;
+      try { await rpc('api_logout', this.token); } catch (e) {}
+      this.clearSession();
+    },
+
+    clearSession() {
+      sessionStorage.removeItem('ltc_token');
+      this.token = null;
+      this.user = null;
+      this.dashboard = null;
+      this.loginForm = { username:'', password:'' };
+    },
+
+    // ============================================================
+    // ── Navigation ──────────────────────────────────────────────
+    // ============================================================
+    showPage(pageName) {
+      this.page = pageName;
+      const main = document.getElementById('main');
+      if (main) main.scrollTop = 0;
+      if (pageName === 'dashboard' && !this.dashboard) this.loadDashboard();
+      // แจ้ง component ย่อย (เช่น map) ว่าหน้าเปลี่ยน
+      try { window.dispatchEvent(new CustomEvent('ltc-page', { detail: pageName })); } catch (e) {}
+    },
+
+    pageTitle() {
+      const item = this.navItems.find(n => n.page === this.page);
+      return item ? item.label : '';
+    },
+
+    canAccess(roles) {
+      if (!roles || !this.user) return !!this.user;
+      return roles.includes(this.user.role);
+    },
+
+    roleLabel(role) {
+      return ({
+        admin:'ผู้ดูแลระบบ', cm:'Care Manager',
+        cg:'Caregiver', viewer:'ผู้ดูข้อมูล'
+      })[role] || role || '';
+    },
+
+    // ============================================================
+    // ── Loading ─────────────────────────────────────────────────
+    // ============================================================
+    showLoading(text) { this.loading = true; this.loadingText = text || 'กำลังโหลด...'; },
+    hideLoading()     { this.loading = false; },
+
+    // ============================================================
+    // ── Dashboard ───────────────────────────────────────────────
+    // ============================================================
+    async loadDashboard() {
+      this.dashboardLoading = true;
+      this.dashboardError = '';
+      try {
+        const r = await rpc('api_getDashboardData', this.token, this.filter);
+        if (!r.success) {
+          this.dashboardError = r.message || 'ดึงข้อมูลไม่สำเร็จ';
+          showError(this.dashboardError);
+          return;
+        }
+        this.dashboard = r.data;
+      } catch (e) {
+        this.dashboardError = (e && e.message) ? e.message : 'ดึงข้อมูลไม่สำเร็จ';
+        showError(this.dashboardError);
+      } finally {
+        this.dashboardLoading = false;
+      }
+    },
+
+    async applyFilter() {
+      await this.loadDashboard();
+    },
+
+    resetFilter() {
+      this.filter = { dateFrom:'', dateTo:'', village:'', careManagerId:'', caregiverId:'', status:'' };
+      this.loadDashboard();
+    },
+
+    // ============================================================
+    // ── Helpers (Display) ───────────────────────────────────────
+    // ============================================================
+    formatThaiDate(iso) {
+      if (!iso) return '-';
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return String(iso);
+      const months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+      return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543}`;
+    },
+
+    formatMonth(yyyymm) {
+      if (!yyyymm) return '';
+      const [y, m] = yyyymm.split('-');
+      const months = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+      return months[parseInt(m)] + ' ' + (parseInt(y) + 543 - 2500);
+    },
+
+    formatNumber(n) {
+      if (n == null || n === '') return '0';
+      return Number(n).toLocaleString('th-TH');
+    },
+
+    /** maxValue() — หา max ใน array เพื่อ scale chart */
+    maxValue(arr, key) {
+      if (!arr || !arr.length) return 1;
+      const max = Math.max(...arr.map(x => Number(x[key]) || 0));
+      return max > 0 ? max : 1;
+    },
+
+    barHeight(value, max) {
+      const pct = Math.max(4, (Number(value) / Number(max)) * 100);
+      return pct + '%';
+    },
+
+    statusLabel(s) {
+      return ({ draft:'ฉบับร่าง', active:'ใช้งานอยู่', completed:'เสร็จสิ้น', cancelled:'ยกเลิก' })[s] || s;
+    },
+
+    statusColor(s) {
+      return ({ draft:'gray', active:'green', completed:'blue', cancelled:'red' })[s] || 'gray';
+    }
+  };
+}
+
+// ============================================================
+// ── Global Error Logging ────────────────────────────────────
+// ============================================================
+window.addEventListener('error', function(e) {
+  try {
+    rpc('api_logClientError', {
+      type: 'error',
+      message: String(e.message || ''),
+      source: String(e.filename || ''),
+      line: e.lineno || 0, col: e.colno || 0,
+      stack: e.error && e.error.stack ? String(e.error.stack).substring(0, 1000) : '',
+      userAgent: String(navigator.userAgent || '').substring(0, 200),
+      url: location.href
+    }).catch(function(){});
+  } catch (err) {}
+});
+
+window.addEventListener('unhandledrejection', function(e) {
+  try {
+    rpc('api_logClientError', {
+      type: 'unhandledrejection',
+      message: String((e.reason && e.reason.message) || e.reason || ''),
+      stack: (e.reason && e.reason.stack) ? String(e.reason.stack).substring(0, 1000) : '',
+      url: location.href
+    }).catch(function(){});
+  } catch (err) {}
+});
+</script>

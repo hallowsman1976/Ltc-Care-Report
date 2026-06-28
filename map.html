@@ -1,0 +1,190 @@
+<!-- ============================================================
+     map.html — Geographic Case Map (Leaflet)
+     ============================================================ -->
+<div x-data="mapView()" x-init="init()">
+
+  <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+    <div>
+      <h1 class="text-xl sm:text-2xl font-bold text-slate-800">🗺️ แผนที่เคส</h1>
+      <p class="text-xs text-slate-500 mt-0.5">แสดงตำแหน่งบ้านผู้รับบริการตามสถานะการดูแล</p>
+    </div>
+    <button @click="loadCases()" class="btn btn-secondary btn-sm" :disabled="loading">🔄 รีเฟรช</button>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar mb-3">
+    <div>
+      <label class="form-label">🏘️ หมู่บ้าน</label>
+      <select x-model="filter.village" @change="loadCases()" class="form-input">
+        <option value="">ทุกหมู่บ้าน</option>
+        <template x-for="v in filterOptions.villages" :key="v"><option :value="v" x-text="v"></option></template>
+      </select>
+    </div>
+    <div>
+      <label class="form-label">👩‍⚕️ ผู้ดูแล (CG)</label>
+      <select x-model="filter.caregiverId" @change="loadCases()" class="form-input">
+        <option value="">ทั้งหมด</option>
+        <template x-for="c in filterOptions.caregivers" :key="c.userId">
+          <option :value="c.userId" x-text="c.fullName"></option>
+        </template>
+      </select>
+    </div>
+    <div>
+      <label class="form-label">🎯 สถานะ</label>
+      <select x-model="filter.status" @change="loadCases()" class="form-input">
+        <option value="">ทุกสถานะ</option>
+        <option value="green">🟢 ดูแลตามแผน</option>
+        <option value="yellow">🟡 ใกล้ครบกำหนด</option>
+        <option value="red">🔴 เลยกำหนด/ติดตาม</option>
+        <option value="purple">🟣 Palliative Care</option>
+      </select>
+    </div>
+    <div class="flex items-end">
+      <button @click="resetFilter()" class="btn btn-secondary w-full">↺ ล้างตัวกรอง</button>
+    </div>
+  </div>
+
+  <!-- Legend / counts -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+    <div class="stat-card stat-green !p-3"><div class="stat-icon !w-9 !h-9 !text-base">🟢</div>
+      <div><div class="stat-value !text-xl" x-text="counts.green||0"></div><div class="stat-label">ตามแผน</div></div></div>
+    <div class="stat-card stat-yellow !p-3"><div class="stat-icon !w-9 !h-9 !text-base">🟡</div>
+      <div><div class="stat-value !text-xl" x-text="counts.yellow||0"></div><div class="stat-label">ใกล้ครบ</div></div></div>
+    <div class="stat-card stat-red !p-3"><div class="stat-icon !w-9 !h-9 !text-base">🔴</div>
+      <div><div class="stat-value !text-xl" x-text="counts.red||0"></div><div class="stat-label">เลยกำหนด</div></div></div>
+    <div class="stat-card stat-purple !p-3"><div class="stat-icon !w-9 !h-9 !text-base">🟣</div>
+      <div><div class="stat-value !text-xl" x-text="counts.purple||0"></div><div class="stat-label">Palliative</div></div></div>
+  </div>
+
+  <div x-show="counts.noGps" class="bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-xl p-3 mb-3">
+    ⚠️ มี <b x-text="counts.noGps"></b> เคสที่ยังไม่มีพิกัด GPS (ไม่แสดงบนแผนที่) — เพิ่มพิกัดได้ในหน้าผู้รับบริการ
+  </div>
+
+  <!-- Map container -->
+  <div class="card p-0 overflow-hidden">
+    <div id="ltc-map" style="height: 65vh; min-height: 400px; width: 100%; background:#e2e8f0;"></div>
+  </div>
+
+  <div x-show="loading" class="text-center text-sm text-slate-400 mt-3">⏳ กำลังโหลดแผนที่...</div>
+</div>
+
+<script>
+function mapView() {
+  return {
+    loading: true,
+    filter: { village:'', caregiverId:'', status:'' },
+    filterOptions: { villages:[], caregivers:[] },
+    counts: {},
+    cases: [],
+    _map: null,
+    _markers: [],
+    _initialized: false,
+
+    init() {
+      // init แผนที่เมื่อหน้าถูกแสดง (Leaflet ต้องการ container ที่มองเห็น)
+      window.addEventListener('ltc-page', (e) => {
+        if (e.detail === 'map') {
+          this.$nextTick(() => { this.ensureMap(); if (!this.cases.length) this.loadCases(); });
+        }
+      });
+      // ถ้าเปิดหน้า map อยู่แล้ว
+      if (this.$root.page === 'map') {
+        this.$nextTick(() => { this.ensureMap(); this.loadCases(); });
+      } else {
+        this.loading = false;
+      }
+    },
+
+    ensureMap() {
+      if (this._initialized) { if (this._map) this._map.invalidateSize(); return; }
+      if (typeof L === 'undefined') return;
+      this._map = L.map('ltc-map').setView([13.736717, 100.523186], 12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap', maxZoom: 19
+      }).addTo(this._map);
+      this._initialized = true;
+      setTimeout(() => this._map && this._map.invalidateSize(), 200);
+    },
+
+    async loadCases() {
+      this.loading = true;
+      try {
+        const r = await rpc('api_getMapCases', this.$root.token, this.filter);
+        if (!r.success) { showError(r.message); return; }
+        this.cases = r.data.cases || [];
+        this.counts = r.data.counts || {};
+        this.filterOptions = r.data.filterOptions || { villages:[], caregivers:[] };
+        this.ensureMap();
+        this.renderMarkers(r.data.center);
+      } catch (e) {
+        showError(e.message || 'โหลดแผนที่ไม่สำเร็จ');
+      } finally { this.loading = false; }
+    },
+
+    renderMarkers(center) {
+      if (!this._map) return;
+      // เคลียร์ marker เดิม
+      this._markers.forEach(m => this._map.removeLayer(m));
+      this._markers = [];
+
+      const bounds = [];
+      this.cases.forEach(c => {
+        const icon = L.divIcon({
+          className: 'ltc-marker',
+          html: `<div style="width:22px;height:22px;border-radius:50%;background:${c.statusColor};
+                  border:3px solid white;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`,
+          iconSize: [22,22], iconAnchor: [11,11]
+        });
+        const marker = L.marker([c.lat, c.lng], { icon }).addTo(this._map);
+        marker.bindPopup(this.popupHtml(c), { maxWidth: 280 });
+        this._markers.push(marker);
+        bounds.push([c.lat, c.lng]);
+      });
+
+      if (bounds.length) {
+        this._map.fitBounds(bounds, { padding: [40,40], maxZoom: 16 });
+      } else if (center) {
+        this._map.setView([center.lat, center.lng], 12);
+      }
+    },
+
+    popupHtml(c) {
+      const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`;
+      const phone = c.caregiverPhone || c.mainCaregiverPhone || '-';
+      return `
+        <div style="font-family:'Noto Sans Thai',sans-serif;min-width:200px">
+          <div style="font-weight:700;font-size:14px;color:#1e293b;margin-bottom:2px">${c.fullName}</div>
+          <div style="display:inline-block;background:${c.statusColor};color:#fff;font-size:10px;
+               padding:2px 8px;border-radius:8px;margin-bottom:6px">${c.statusLabel}</div>
+          <div style="font-size:12px;color:#475569;line-height:1.7">
+            👤 ${c.age||'-'} ปี · ${c.sex||'-'}<br>
+            🧩 ADL: <b>${c.adlScore||'-'}/20</b> ${c.taiGroup?('· '+c.taiGroup):''}<br>
+            ${c.ppsScore!==''?('🛏️ PPS: <b>'+c.ppsScore+'%</b><br>'):''}
+            🏠 ${c.village||'-'}<br>
+            📅 เยี่ยมล่าสุด: ${c.lastVisitDate?this.fmt(c.lastVisitDate):'ยังไม่เคย'}<br>
+            ${c.nextVisitDate?('📌 นัดถัดไป: '+this.fmt(c.nextVisitDate)+'<br>'):''}
+            👩‍⚕️ ผู้ดูแล: ${c.caregiverName||'-'}<br>
+            📞 <a href="tel:${phone}" style="color:#2563eb">${phone}</a>
+          </div>
+          <a href="${navUrl}" target="_blank"
+             style="display:block;text-align:center;margin-top:8px;background:#1d4ed8;color:#fff;
+             padding:8px;border-radius:10px;font-size:13px;font-weight:600;text-decoration:none">
+            🧭 นำทาง (Google Maps)
+          </a>
+        </div>`;
+    },
+
+    fmt(d) {
+      const dt = new Date(d);
+      if (isNaN(dt)) return d;
+      const mo = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+      return dt.getDate()+' '+mo[dt.getMonth()]+' '+(dt.getFullYear()+543);
+    },
+
+    resetFilter() {
+      this.filter = { village:'', caregiverId:'', status:'' };
+      this.loadCases();
+    }
+  };
+}
+</script>

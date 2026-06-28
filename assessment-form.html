@@ -1,0 +1,784 @@
+<!-- ============================================================
+     assessment-form.html — LTC Assessment Stepper (5 steps)
+     ============================================================ -->
+<div x-data="assessmentForm()" x-init="init()">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+    <div>
+      <h1 class="text-xl sm:text-2xl font-bold text-slate-800">📋 แบบประเมินสุขภาพ LTC</h1>
+      <p class="text-xs text-slate-500 mt-0.5">5 ขั้นตอน · ทำต่อเนื่องหรือข้ามได้</p>
+    </div>
+  </div>
+
+  <!-- ── Disclaimer ── -->
+  <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 flex gap-2 items-start text-xs text-amber-800">
+    <span class="text-base">⚠️</span>
+    <span>ผลการแปลความหมายทั้งหมดเป็นเพียง <b>การคัดกรองเบื้องต้น</b> ไม่ใช่การวินิจฉัยทางการแพทย์ กรุณาปรึกษาแพทย์เพื่อยืนยันผล</span>
+  </div>
+
+  <!-- ── Patient + Visit selector (sticky) ── -->
+  <div class="card mb-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <label class="form-label">👤 ผู้รับบริการ <span class="text-red-500">*</span></label>
+        <select x-model="selectedPatientId" @change="onPatientChange()" class="form-input">
+          <option value="">-- เลือกผู้รับบริการ --</option>
+          <template x-for="p in patients" :key="p.PatientID">
+            <option :value="p.PatientID" x-text="p.FullName+' ('+(p.HN||'-')+')'"></option>
+          </template>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">🚪 การเยี่ยมที่จะผูก <span class="text-red-500">*</span></label>
+        <select x-model="selectedVisitId" class="form-input" :disabled="!selectedPatientId">
+          <option value="">-- เลือก Visit --</option>
+          <template x-for="v in visits" :key="v.VisitID">
+            <option :value="v.VisitID"
+                    x-text="'ครั้งที่ '+v.VisitNo+' · '+formatDate(v.VisitDate)"></option>
+          </template>
+        </select>
+        <p x-show="selectedPatientId && !visits.length" class="text-xs text-red-600 mt-1">
+          ⚠️ ผู้ป่วยรายนี้ยังไม่มีการเยี่ยม กรุณาบันทึกการเยี่ยมก่อน
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Stepper ── -->
+  <div class="card mb-4 p-3">
+    <div class="flex items-center justify-between overflow-x-auto pb-1">
+      <template x-for="(s, idx) in steps" :key="s.id">
+        <div class="flex items-center flex-shrink-0">
+          <button @click="goTo(idx)" :disabled="!canGoStep(idx)"
+                  class="flex items-center gap-2 px-2 py-1 rounded-lg transition"
+                  :class="step===idx ? 'bg-primary-100 text-primary-800' : (idx<step ? 'text-accent-700' : 'text-slate-400')">
+            <span class="w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0"
+                  :class="step===idx ? 'bg-primary-600 text-white' : (idx<step ? 'bg-accent-500 text-white' : 'bg-slate-200')"
+                  x-text="idx<step?'✓':(idx+1)"></span>
+            <span class="text-xs sm:text-sm font-semibold whitespace-nowrap" x-text="s.label"></span>
+          </button>
+          <span x-show="idx < steps.length-1" class="mx-1 text-slate-300">—</span>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- ──────────────────────────────────────────────── -->
+  <!-- ── STEP 1: VITAL SIGNS ───────────────────────── -->
+  <!-- ──────────────────────────────────────────────── -->
+  <div x-show="step===0" class="card">
+    <div class="section-title">💓 Step 1: สัญญาณชีพ</div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
+      <div>
+        <label class="form-label">น้ำหนัก (กก.)</label>
+        <input type="number" step="0.1" x-model="vital.Weight" @input="updateBMI()" class="form-input">
+      </div>
+      <div>
+        <label class="form-label">ส่วนสูง (ซม.)</label>
+        <input type="number" step="0.1" x-model="vital.Height" @input="updateBMI()" class="form-input">
+      </div>
+      <div>
+        <label class="form-label">BMI (อัตโนมัติ)</label>
+        <div class="form-input bg-slate-50 font-bold" :class="bmiColor"
+             x-text="(vital.BMI||'-')+' '+bmiInterp"></div>
+      </div>
+
+      <div>
+        <label class="form-label">อุณหภูมิ (°C)</label>
+        <input type="number" step="0.1" x-model="vital.Temperature" class="form-input">
+      </div>
+      <div>
+        <label class="form-label">ชีพจร (ครั้ง/นาที)</label>
+        <input type="number" x-model="vital.Pulse" class="form-input">
+      </div>
+      <div>
+        <label class="form-label">การหายใจ</label>
+        <input type="number" x-model="vital.RespiratoryRate" class="form-input">
+      </div>
+    </div>
+
+    <div class="bg-slate-50 rounded-xl p-3 mb-3">
+      <div class="text-xs font-semibold text-slate-600 mb-2">🩸 ความดันโลหิต (BP)</div>
+      <div class="grid grid-cols-3 gap-2 items-end">
+        <div>
+          <label class="form-label text-xs">SBP (บน)</label>
+          <input type="number" x-model="vital.SBP" @input="updateBP()" class="form-input">
+        </div>
+        <div>
+          <label class="form-label text-xs">DBP (ล่าง)</label>
+          <input type="number" x-model="vital.DBP" @input="updateBP()" class="form-input">
+        </div>
+        <div>
+          <div class="text-xs text-slate-500">แปลผล</div>
+          <div class="text-sm font-bold py-2" :class="bpColor" x-text="bpInterp||'-'"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
+      <div>
+        <label class="form-label">DTX (mg/dL)</label>
+        <input type="number" x-model="vital.DTX" @input="updateDTX()" class="form-input">
+        <div class="text-xs font-semibold mt-1" :class="dtxColor" x-text="dtxInterp"></div>
+      </div>
+      <div>
+        <label class="form-label">Pain Score (0-10)</label>
+        <input type="number" min="0" max="10" x-model="vital.PainScore" class="form-input">
+      </div>
+      <div>
+        <label class="form-label">O2 Sat (%)</label>
+        <input type="number" min="0" max="100" x-model="vital.OxygenSat" class="form-input">
+      </div>
+    </div>
+
+    <div class="flex justify-between gap-2 pt-3 border-t">
+      <button @click="next()" class="btn btn-secondary">ข้าม →</button>
+      <button @click="saveVital()" class="btn btn-primary btn-lg flex-1" :disabled="!canSave || saving">
+        <span x-text="saving?'⏳ บันทึก...':'💾 บันทึก Vital Signs'"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ──────────────────────────────────────────────── -->
+  <!-- ── STEP 2: ADL ──────────────────────────────── -->
+  <!-- ──────────────────────────────────────────────── -->
+  <div x-show="step===1" class="card">
+    <div class="section-title">🧩 Step 2: ADL (Activities of Daily Living)</div>
+    <p class="text-xs text-slate-500 mb-3">ประเมิน 10 รายการ คะแนนรวม 0-20</p>
+
+    <div class="space-y-2 mb-4">
+      <template x-for="item in adlItems" :key="item.key">
+        <div class="bg-slate-50 rounded-xl p-3">
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-semibold text-sm" x-text="item.label"></span>
+            <span class="text-xs text-slate-500" x-text="'0-'+item.max"></span>
+          </div>
+          <div class="flex gap-1.5 flex-wrap">
+            <template x-for="n in (item.max+1)">
+              <button type="button" @click="adl[item.key] = n-1; calcADLTotal()"
+                      :class="adl[item.key]==(n-1) ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-slate-600 border-slate-200'"
+                      class="w-12 h-10 rounded-lg border-2 font-bold text-sm transition"
+                      x-text="n-1"></button>
+            </template>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- ADL Summary -->
+    <div class="bg-gradient-to-r from-primary-50 to-accent-50 rounded-2xl p-4 mb-3">
+      <div class="text-center">
+        <div class="text-xs text-slate-600">คะแนนรวม ADL</div>
+        <div class="text-4xl font-bold text-primary-700" x-text="adlTotal+' / 20'"></div>
+        <div class="text-sm font-semibold mt-1" :class="adlColor" x-text="adlLevel"></div>
+        <div class="mt-2 text-sm font-bold" :class="taiColor" x-text="taiGroup"></div>
+        <div x-show="adlTotal<=11" class="mt-2 inline-flex items-center gap-1 bg-orange-100 text-orange-800 text-xs font-semibold px-3 py-1 rounded-full">
+          ⚠️ ADL ≤ 11 → จัดเป็น "ผู้พึ่งพิง"
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-between gap-2 pt-3 border-t">
+      <button @click="prev()" class="btn btn-secondary">← กลับ</button>
+      <button @click="next()" class="btn btn-secondary">ข้าม →</button>
+      <button @click="saveADL()" class="btn btn-primary btn-lg flex-1" :disabled="!canSave || saving">
+        <span x-text="saving?'⏳':'💾 บันทึก ADL'"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ──────────────────────────────────────────────── -->
+  <!-- ── STEP 3: PPS ──────────────────────────────── -->
+  <!-- ──────────────────────────────────────────────── -->
+  <div x-show="step===2" class="card">
+    <div class="section-title">🛏️ Step 3: PPS (Palliative Performance Scale)</div>
+    <p class="text-xs text-slate-500 mb-3">สำหรับผู้ป่วยระยะสุดท้าย/มีโรคเรื้อรัง คะแนน 0-100% (ลำดับ 10)</p>
+
+    <div class="mb-3">
+      <label class="form-label">🎯 PPS Score <span class="text-red-500">*</span></label>
+      <div class="grid grid-cols-6 sm:grid-cols-11 gap-1.5">
+        <template x-for="n in 11">
+          <button type="button" @click="pps.PPSScore = (11-n)*10; updatePPS()"
+                  :class="pps.PPSScore===(11-n)*10 ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-slate-600 border-slate-200'"
+                  class="h-12 rounded-lg border-2 font-bold text-sm transition"
+                  x-text="(11-n)*10+'%'"></button>
+        </template>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+      <div>
+        <label class="form-label">การเดิน (Ambulation)</label>
+        <select x-model="pps.Ambulation" class="form-input">
+          <option value="">-- เลือก --</option>
+          <option>เต็มที่</option><option>ลดลง</option>
+          <option>นั่ง/นอนเป็นส่วนใหญ่</option><option>นอนเป็นส่วนใหญ่</option>
+          <option>นอนตลอด</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">กิจกรรม + โรค</label>
+        <select x-model="pps.ActivityDisease" class="form-input">
+          <option value="">-- เลือก --</option>
+          <option>ปกติ ไม่มีโรค</option>
+          <option>ปกติ มีโรคบางอย่าง</option>
+          <option>จำกัด เนื่องจากโรค</option>
+          <option>ทำงานไม่ได้ โรคลุกลาม</option>
+          <option>ทำกิจกรรมไม่ได้</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">การดูแลตนเอง (Self-Care)</label>
+        <select x-model="pps.SelfCare" class="form-input">
+          <option value="">-- เลือก --</option>
+          <option>เต็มที่</option><option>ต้องช่วยเป็นครั้งคราว</option>
+          <option>ต้องช่วยมาก</option><option>ต้องดูแลส่วนใหญ่</option>
+          <option>ต้องดูแลทั้งหมด</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">การรับประทาน (Intake)</label>
+        <select x-model="pps.Intake" class="form-input">
+          <option value="">-- เลือก --</option>
+          <option>ปกติ</option><option>ลดลง</option>
+          <option>ทานน้อยมาก</option><option>เฉพาะดูแลปาก</option>
+        </select>
+      </div>
+      <div class="sm:col-span-2">
+        <label class="form-label">ระดับความรู้สึกตัว (Conscious Level)</label>
+        <select x-model="pps.ConsciousLevel" class="form-input">
+          <option value="">-- เลือก --</option>
+          <option>รู้ตัวดี</option><option>รู้ตัวหรือสับสน</option>
+          <option>รู้ตัวหรือซึม</option><option>ซึมหรือโคม่า</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- PPS Summary -->
+    <div x-show="pps.PPSScore!==''" class="rounded-2xl p-4 mb-3"
+         :class="ppsCategory==='palliative' ? 'bg-red-50' : ppsCategory==='supportive' ? 'bg-yellow-50' : 'bg-green-50'">
+      <div class="text-center">
+        <div class="text-xs text-slate-600">PPS Score</div>
+        <div class="text-4xl font-bold" :class="ppsColor" x-text="pps.PPSScore+'%'"></div>
+        <div class="text-sm font-semibold mt-1" x-text="ppsLevel"></div>
+        <div x-show="ppsCategory==='palliative'" class="mt-2 inline-flex items-center gap-1 bg-red-200 text-red-900 text-xs font-bold px-3 py-1 rounded-full">
+          🕊️ Palliative Care — ผู้ป่วยระยะท้าย พิจารณา Advance Care Planning
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-between gap-2 pt-3 border-t">
+      <button @click="prev()" class="btn btn-secondary">← กลับ</button>
+      <button @click="next()" class="btn btn-secondary">ข้าม →</button>
+      <button @click="savePPS()" class="btn btn-primary btn-lg flex-1" :disabled="!canSave || saving">
+        <span x-text="saving?'⏳':'💾 บันทึก PPS'"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ──────────────────────────────────────────────── -->
+  <!-- ── STEP 4: MENTAL HEALTH 2Q/9Q ─────────────── -->
+  <!-- ──────────────────────────────────────────────── -->
+  <div x-show="step===3" class="card">
+    <div class="section-title">🧠 Step 4: คัดกรองสุขภาพจิต (2Q / 9Q)</div>
+
+    <!-- 2Q -->
+    <div class="bg-slate-50 rounded-xl p-4 mb-4">
+      <h4 class="font-bold text-slate-700 mb-3">📋 แบบคัดกรอง 2Q (ใน 2 สัปดาห์ที่ผ่านมา)</h4>
+      <template x-for="(q, idx) in mentalConfig.q2Questions" :key="idx">
+        <div class="mb-3 last:mb-0">
+          <div class="text-sm mb-2" x-text="(idx+1)+'. '+q"></div>
+          <div class="flex gap-2">
+            <button type="button" @click="mental['Q'+(idx+1)]='yes'; update2Q()"
+                    :class="mental['Q'+(idx+1)]==='yes' ? 'bg-red-500 text-white border-red-500' : 'bg-white text-slate-600 border-slate-300'"
+                    class="flex-1 py-3 rounded-xl border-2 font-semibold transition">✓ ใช่</button>
+            <button type="button" @click="mental['Q'+(idx+1)]='no'; update2Q()"
+                    :class="mental['Q'+(idx+1)]==='no' ? 'bg-accent-500 text-white border-accent-500' : 'bg-white text-slate-600 border-slate-300'"
+                    class="flex-1 py-3 rounded-xl border-2 font-semibold transition">✗ ไม่ใช่</button>
+          </div>
+        </div>
+      </template>
+      <div x-show="q2Total !== null" class="mt-3 text-center p-3 rounded-xl"
+           :class="q2AtRisk ? 'bg-orange-100' : 'bg-green-100'">
+        <div class="text-xs text-slate-600">คะแนน 2Q</div>
+        <div class="text-2xl font-bold" :class="q2AtRisk?'text-orange-700':'text-green-700'"
+             x-text="q2Total+' / 2'"></div>
+        <div class="text-sm font-semibold" :class="q2AtRisk?'text-orange-700':'text-green-700'"
+             x-text="q2AtRisk ? '⚠️ เสี่ยง — กรุณาทำ 9Q เพิ่มเติม' : '✓ ไม่เสี่ยง'"></div>
+      </div>
+    </div>
+
+    <!-- 9Q (show if 2Q risky) -->
+    <div x-show="show9Q" x-cloak class="bg-orange-50 border-2 border-orange-200 rounded-xl p-4 mb-4">
+      <h4 class="font-bold text-orange-800 mb-2">⚠️ แบบประเมินซึมเศร้า 9Q (ตอบทุกข้อ)</h4>
+      <p class="text-xs text-slate-600 mb-3">0=ไม่มี · 1=มีบางวัน · 2=บ่อยกว่า · 3=ทุกวัน</p>
+
+      <template x-for="(q, idx) in mentalConfig.q9Questions" :key="idx">
+        <div class="mb-3 last:mb-0">
+          <div class="text-sm mb-2">
+            <span x-text="(idx+1)+'. '+q"></span>
+          </div>
+          <div class="flex gap-1.5">
+            <template x-for="n in 4">
+              <button type="button" @click="m9['Q'+(idx+1)] = n-1; update9Q()"
+                      :class="m9['Q'+(idx+1)]==(n-1) ? (idx===8 && n>1 ? 'bg-red-600 text-white border-red-600' : 'bg-primary-600 text-white border-primary-600') : 'bg-white border-slate-300'"
+                      class="flex-1 h-11 rounded-lg border-2 font-bold text-sm transition"
+                      x-text="n-1"></button>
+            </template>
+          </div>
+        </div>
+      </template>
+
+      <!-- ⚠️ Suicidal red alert -->
+      <div x-show="suicidalAlert" x-cloak class="mt-4 bg-red-600 text-white rounded-xl p-4 animate-pulse">
+        <div class="flex items-center gap-2 font-bold text-lg">🚨 ความเสี่ยงสูง!</div>
+        <p class="text-sm mt-2">ตรวจพบความคิดทำร้ายตนเอง (Q9 > 0)</p>
+        <ul class="text-xs mt-2 space-y-1 list-disc list-inside">
+          <li>📞 ติดต่อสายด่วนสุขภาพจิต <b>1323</b> ทันที</li>
+          <li>🚑 หรือฉุกเฉินทางการแพทย์ <b>1669</b></li>
+          <li>👨‍⚕️ ส่งต่อจิตแพทย์โดยด่วน</li>
+          <li>👨‍👩‍👧 แจ้งครอบครัว/ผู้ดูแลให้เฝ้าระวังตลอด 24 ชม.</li>
+        </ul>
+      </div>
+
+      <div x-show="q9Total !== null && !suicidalAlert" class="mt-3 text-center p-3 rounded-xl bg-white">
+        <div class="text-xs text-slate-600">คะแนน 9Q</div>
+        <div class="text-2xl font-bold text-orange-700" x-text="q9Total+' / 27'"></div>
+        <div class="text-sm font-semibold text-slate-700" x-text="q9Interp"></div>
+      </div>
+    </div>
+
+    <div class="flex justify-between gap-2 pt-3 border-t">
+      <button @click="prev()" class="btn btn-secondary">← กลับ</button>
+      <button @click="next()" class="btn btn-secondary">ข้าม →</button>
+      <button @click="saveMental()" class="btn btn-primary btn-lg flex-1" :disabled="!canSave || saving || q2Total===null">
+        <span x-text="saving?'⏳':(show9Q?'💾 บันทึก 9Q':'💾 บันทึก 2Q')"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ──────────────────────────────────────────────── -->
+  <!-- ── STEP 5: BENEFIT PACKAGE REPORT ────────────── -->
+  <!-- ──────────────────────────────────────────────── -->
+  <div x-show="step===4" class="card">
+    <div class="section-title">✅ Step 5: รายงานบริการ Benefit Package</div>
+
+    <div class="grid grid-cols-2 gap-3 mb-4">
+      <div>
+        <label class="form-label">ปีงบประมาณ (ค.ศ.)</label>
+        <input type="number" x-model="benefit.FiscalYear" class="form-input" min="2020" max="2050">
+      </div>
+      <div>
+        <label class="form-label">เดือนที่รายงาน</label>
+        <select x-model="benefit.ReportMonth" class="form-input">
+          <template x-for="m in 12"><option :value="m" x-text="thaiMonth(m)"></option></template>
+        </select>
+      </div>
+    </div>
+
+    <p class="text-xs text-slate-500 mb-2">เลือกบริการที่ให้ในเดือนนี้ (เลือกอย่างน้อย 1 รายการ)</p>
+
+    <template x-for="g in benefitGroups" :key="g">
+      <div class="mb-4">
+        <div class="font-bold text-sm text-primary-700 mb-2" x-text="'📦 '+g"></div>
+        <div class="space-y-2">
+          <template x-for="item in benefitItems.filter(x => x.group === g)" :key="item.id">
+            <div class="bg-slate-50 rounded-xl p-3">
+              <label class="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" :checked="isBenefitSelected(item.id)"
+                       @change="toggleBenefit(item)" class="mt-1 w-5 h-5 accent-primary-600">
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-semibold" x-text="item.name"></div>
+                  <div class="text-[10px] text-slate-400 font-mono" x-text="item.id+' · หน่วย: '+item.unit"></div>
+                </div>
+              </label>
+              <div x-show="isBenefitSelected(item.id)" class="mt-3 pl-8 grid grid-cols-2 gap-2">
+                <div>
+                  <label class="form-label text-xs">จำนวน</label>
+                  <input type="number" min="1"
+                         :value="getBenefitItem(item.id)?.quantity || 1"
+                         @input="updateBenefitItem(item.id, 'quantity', $event.target.value)"
+                         class="form-input">
+                </div>
+                <div>
+                  <label class="form-label text-xs">ผู้ให้บริการ</label>
+                  <input type="text"
+                         :value="getBenefitItem(item.id)?.provider || $root.user?.fullName || ''"
+                         @input="updateBenefitItem(item.id, 'provider', $event.target.value)"
+                         class="form-input" placeholder="ชื่อผู้ให้บริการ">
+                </div>
+                <div class="col-span-2">
+                  <label class="form-label text-xs">หมายเหตุ</label>
+                  <input type="text"
+                         :value="getBenefitItem(item.id)?.notes || ''"
+                         @input="updateBenefitItem(item.id, 'notes', $event.target.value)"
+                         class="form-input" placeholder="รายละเอียดเพิ่มเติม">
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
+
+    <div>
+      <label class="form-label">📝 หมายเหตุภาพรวม</label>
+      <textarea x-model="benefit.Notes" rows="2" class="form-input"
+                placeholder="หมายเหตุประจำเดือน"></textarea>
+    </div>
+
+    <div class="bg-primary-50 rounded-xl p-3 mt-3 text-center">
+      <div class="text-xs text-slate-600">เลือกแล้ว</div>
+      <div class="text-2xl font-bold text-primary-700"
+           x-text="benefit.ServiceItems.length+' รายการ'"></div>
+    </div>
+
+    <div class="flex justify-between gap-2 pt-3 mt-3 border-t">
+      <button @click="prev()" class="btn btn-secondary">← กลับ</button>
+      <button @click="saveBenefit()" class="btn btn-success btn-lg flex-1" :disabled="!canSave || saving || !benefit.ServiceItems.length">
+        <span x-text="saving?'⏳':'✅ บันทึกรายงานบริการ'"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+function assessmentForm() {
+  return {
+    // ── Steps ──
+    step: 0,
+    steps: [
+      { id:'vital',   label:'Vital Signs' },
+      { id:'adl',     label:'ADL' },
+      { id:'pps',     label:'PPS' },
+      { id:'mental',  label:'Mental 2Q/9Q' },
+      { id:'benefit', label:'Benefit' }
+    ],
+    saving: false,
+
+    // ── Patient & Visit ──
+    patients: [],
+    visits: [],
+    selectedPatientId: '',
+    selectedVisitId: '',
+
+    // ── Vital Signs ──
+    vital: { Weight:'', Height:'', BMI:'', Temperature:'', Pulse:'',
+             RespiratoryRate:'', SBP:'', DBP:'', DTX:'', PainScore:'', OxygenSat:'' },
+    bmiInterp:'', bmiColor:'',
+    bpInterp:'', bpColor:'',
+    dtxInterp:'', dtxColor:'',
+
+    // ── ADL ──
+    adlItems: [
+      { key:'Feeding',   label:'1. รับประทานอาหาร', max:2 },
+      { key:'Grooming',  label:'2. ล้างหน้า แปรงฟัน', max:1 },
+      { key:'Transfer',  label:'3. ลุก/ย้ายตัว', max:3 },
+      { key:'ToiletUse', label:'4. ใช้ห้องน้ำ', max:2 },
+      { key:'Mobility',  label:'5. การเคลื่อนที่', max:3 },
+      { key:'Dressing',  label:'6. สวมใส่เสื้อผ้า', max:2 },
+      { key:'Stairs',    label:'7. ขึ้น-ลงบันได', max:2 },
+      { key:'Bathing',   label:'8. อาบน้ำ', max:1 },
+      { key:'Bowels',    label:'9. กลั้นอุจจาระ', max:2 },
+      { key:'Bladder',   label:'10. กลั้นปัสสาวะ', max:2 }
+    ],
+    adl: {},
+    adlTotal: 0,
+    adlLevel: '', adlColor: '',
+    taiGroup: '', taiColor: '',
+
+    // ── PPS ──
+    pps: { PPSScore:'', Ambulation:'', ActivityDisease:'', SelfCare:'', Intake:'', ConsciousLevel:'' },
+    ppsLevel: '', ppsCategory: '', ppsColor: '',
+
+    // ── Mental Health ──
+    mentalConfig: {
+      q2Questions: [
+        'รู้สึก หดหู่ เศร้า หรือท้อแท้สิ้นหวัง หรือไม่?',
+        'รู้สึก เบื่อ ทำอะไรก็ไม่เพลิดเพลิน หรือไม่?'
+      ],
+      q9Questions: [
+        'เบื่อ ไม่สนใจอยากทำอะไร',
+        'ไม่สบายใจ ซึมเศร้า ท้อแท้',
+        'หลับยาก/หลับๆ ตื่นๆ หรือหลับมากเกินไป',
+        'เหนื่อยง่าย หรือไม่ค่อยมีแรง',
+        'เบื่ออาหาร หรือกินมากเกินไป',
+        'รู้สึกไม่ดีกับตัวเอง คิดว่าตัวเองล้มเหลว',
+        'สมาธิไม่ดีเวลาทำสิ่งต่างๆ',
+        'พูดช้า/ทำอะไรช้า หรือกระสับกระส่ายมากกว่าปกติ',
+        '⚠️ คิดทำร้ายตนเอง หรือคิดว่าตายไปจะดีกว่า'
+      ]
+    },
+    mental: { Q1:'', Q2:'' },
+    m9: { Q1:'', Q2:'', Q3:'', Q4:'', Q5:'', Q6:'', Q7:'', Q8:'', Q9:'' },
+    q2Total: null, q2AtRisk: false, show9Q: false,
+    q9Total: null, q9Interp: '', suicidalAlert: false,
+
+    // ── Benefit ──
+    benefitItems: [],
+    benefitGroups: [],
+    benefit: {
+      FiscalYear: new Date().getFullYear(),
+      ReportMonth: new Date().getMonth() + 1,
+      ServiceItems: [],
+      Notes: ''
+    },
+
+    // ============================================================
+    async init() {
+      // โหลดผู้ป่วย
+      try {
+        const r = await rpc('api_getPatients', this.$root.token, {});
+        if (r.success) this.patients = r.data || [];
+      } catch (e) { showError(e.message); }
+
+      // โหลด benefit items
+      try {
+        const r = await rpc('api_getBenefitItems', this.$root.token);
+        if (r.success) { this.benefitItems = r.data.items; this.benefitGroups = r.data.groups; }
+      } catch (e) {}
+
+      // เริ่มต้น ADL ทุก field = 0
+      this.adlItems.forEach(i => this.adl[i.key] = 0);
+      this.calcADLTotal();
+    },
+
+    get canSave() {
+      return this.selectedPatientId && this.selectedVisitId;
+    },
+
+    canGoStep(idx) {
+      // อนุญาตให้คลิกย้อนได้เสมอ + คลิกไปข้างหน้าได้ถ้าเลือกผู้ป่วย+visit
+      return idx <= this.step || this.canSave;
+    },
+
+    goTo(idx) { if (this.canGoStep(idx)) this.step = idx; },
+    next() { if (this.step < this.steps.length-1) this.step++; window.scrollTo(0, 0); },
+    prev() { if (this.step > 0) this.step--; window.scrollTo(0, 0); },
+
+    async onPatientChange() {
+      this.selectedVisitId = '';
+      this.visits = [];
+      if (!this.selectedPatientId) return;
+      try {
+        const r = await rpc('api_getVisitsByPatient', this.$root.token, this.selectedPatientId);
+        if (r.success) {
+          this.visits = r.data || [];
+          // เลือก visit ล่าสุดอัตโนมัติ
+          if (this.visits.length) this.selectedVisitId = this.visits[0].VisitID;
+        }
+      } catch (e) { showError(e.message); }
+    },
+
+    // ── Vital interpretations ──
+    async updateBMI() {
+      const w = parseFloat(this.vital.Weight), h = parseFloat(this.vital.Height);
+      if (!w || !h) { this.vital.BMI = ''; this.bmiInterp = ''; return; }
+      this.vital.BMI = Math.round((w / Math.pow(h/100, 2)) * 10) / 10;
+      try {
+        const r = await rpc('api_interpretBMI', this.vital.BMI);
+        if (r.success) {
+          this.bmiInterp = r.data.level;
+          this.bmiColor = this.colorClass(r.data.color);
+        }
+      } catch (e) {}
+    },
+    async updateBP() {
+      if (!this.vital.SBP || !this.vital.DBP) { this.bpInterp=''; return; }
+      try {
+        const r = await rpc('api_interpretBP', this.vital.SBP, this.vital.DBP);
+        if (r.success) { this.bpInterp = r.data.level; this.bpColor = this.colorClass(r.data.color); }
+      } catch (e) {}
+    },
+    async updateDTX() {
+      if (!this.vital.DTX) { this.dtxInterp=''; return; }
+      try {
+        const r = await rpc('api_interpretDTX', this.vital.DTX);
+        if (r.success) { this.dtxInterp = r.data.level; this.dtxColor = this.colorClass(r.data.color); }
+      } catch (e) {}
+    },
+
+    // ── ADL calculation ──
+    async calcADLTotal() {
+      let total = 0;
+      this.adlItems.forEach(i => total += (parseInt(this.adl[i.key])||0));
+      this.adlTotal = total;
+      try {
+        const [interp, tai] = await Promise.all([
+          rpc('api_interpretADL', total),
+          rpc('api_classifyTAI', total, false)
+        ]);
+        if (interp.success) { this.adlLevel = interp.data.level; this.adlColor = this.colorClass(interp.data.color); }
+        if (tai.success)    { this.taiGroup = tai.data.label;
+                              this.taiColor = total>=12?'text-green-700':total>=5?'text-yellow-700':'text-red-700'; }
+      } catch (e) {}
+    },
+
+    // ── PPS ──
+    async updatePPS() {
+      if (this.pps.PPSScore === '') return;
+      try {
+        const r = await rpc('api_interpretPPS', this.pps.PPSScore);
+        if (r.success) {
+          this.ppsLevel = r.data.level;
+          this.ppsCategory = r.data.category;
+          this.ppsColor = this.colorClass(r.data.color);
+        }
+      } catch (e) {}
+    },
+
+    // ── Mental health ──
+    update2Q() {
+      const y = (this.mental.Q1==='yes'?1:0) + (this.mental.Q2==='yes'?1:0);
+      this.q2Total = y;
+      this.q2AtRisk = y >= 1;
+      this.show9Q = this.q2AtRisk;
+    },
+    update9Q() {
+      let total = 0;
+      for (let i=1; i<=9; i++) total += parseInt(this.m9['Q'+i])||0;
+      this.q9Total = total;
+      const q9 = parseInt(this.m9.Q9)||0;
+      this.suicidalAlert = q9 > 0;
+      if (total < 7) this.q9Interp = 'ไม่มีอาการซึมเศร้า';
+      else if (total <= 12) this.q9Interp = 'ซึมเศร้าระดับน้อย';
+      else if (total <= 18) this.q9Interp = 'ซึมเศร้าระดับปานกลาง';
+      else this.q9Interp = 'ซึมเศร้าระดับรุนแรง';
+    },
+
+    // ── Benefit ──
+    isBenefitSelected(id) { return this.benefit.ServiceItems.some(x => x.id === id); },
+    getBenefitItem(id)    { return this.benefit.ServiceItems.find(x => x.id === id); },
+    toggleBenefit(item) {
+      const idx = this.benefit.ServiceItems.findIndex(x => x.id === item.id);
+      if (idx >= 0) this.benefit.ServiceItems.splice(idx, 1);
+      else this.benefit.ServiceItems.push({
+        id: item.id, name: item.name, group: item.group, unit: item.unit,
+        quantity: 1, provider: this.$root.user?.fullName||'', notes: ''
+      });
+    },
+    updateBenefitItem(id, field, value) {
+      const item = this.getBenefitItem(id);
+      if (item) item[field] = value;
+    },
+
+    // ── Save functions ──
+    async _confirmSave_(title) {
+      return showConfirm(title, this.patientLabel() + ' · Visit ' + this.visitLabel());
+    },
+
+    async saveVital() {
+      if (!this.canSave) { showError('กรุณาเลือกผู้ป่วยและ Visit'); return; }
+      if (!await this._confirmSave_('บันทึกสัญญาณชีพ?')) return;
+      this.saving = true;
+      try {
+        const r = await rpc('api_saveVitalSigns', this.$root.token, { ...this.vital, VisitID: this.selectedVisitId });
+        if (!r.success) { showError(r.message); return; }
+        showSuccess(r.message || 'บันทึกสำเร็จ');
+        this.next();
+      } catch (e) { showError(e.message); }
+      finally { this.saving = false; }
+    },
+
+    async saveADL() {
+      if (!this.canSave) { showError('กรุณาเลือกผู้ป่วยและ Visit'); return; }
+      if (!await this._confirmSave_('บันทึก ADL = ' + this.adlTotal + ' / 20?')) return;
+      this.saving = true;
+      try {
+        const r = await rpc('api_saveADL', this.$root.token,
+          { ...this.adl, VisitID: this.selectedVisitId, HasCognitiveImpairment: false });
+        if (!r.success) { showError(r.message); return; }
+        showSuccess(r.message);
+        this.next();
+      } catch (e) { showError(e.message); }
+      finally { this.saving = false; }
+    },
+
+    async savePPS() {
+      if (!this.canSave) { showError('กรุณาเลือกผู้ป่วยและ Visit'); return; }
+      if (this.pps.PPSScore === '') { showError('กรุณาเลือก PPS Score'); return; }
+      if (!await this._confirmSave_('บันทึก PPS = ' + this.pps.PPSScore + '%?')) return;
+      this.saving = true;
+      try {
+        const r = await rpc('api_savePPS', this.$root.token, { ...this.pps, VisitID: this.selectedVisitId });
+        if (!r.success) { showError(r.message); return; }
+        showSuccess(r.message);
+        this.next();
+      } catch (e) { showError(e.message); }
+      finally { this.saving = false; }
+    },
+
+    async saveMental() {
+      if (!this.canSave) { showError('กรุณาเลือกผู้ป่วยและ Visit'); return; }
+      if (this.q2Total === null) { showError('กรุณาตอบ 2Q ก่อน'); return; }
+      const type = this.show9Q ? '9Q' : '2Q';
+      const payload = { VisitID: this.selectedVisitId, ScreeningType: type };
+      if (type === '2Q') { payload.Q1 = this.mental.Q1; payload.Q2 = this.mental.Q2; }
+      else {
+        // ตรวจ 9Q ครบ
+        for (let i=1; i<=9; i++) {
+          if (this.m9['Q'+i]==='') { showError('กรุณาตอบ 9Q ข้อที่ '+i); return; }
+          payload['Q'+i] = parseInt(this.m9['Q'+i]);
+        }
+      }
+      if (!await this._confirmSave_('บันทึก '+type+' = '+(type==='2Q'?this.q2Total:this.q9Total)+' คะแนน?')) return;
+      this.saving = true;
+      try {
+        const r = await rpc('api_saveMentalHealth', this.$root.token, payload);
+        if (!r.success) { showError(r.message); return; }
+        if (r.data?.highRisk) {
+          Swal.fire({ icon:'warning', title:'⚠️ ตรวจพบความเสี่ยงสูง',
+                      html: (r.data.warnings||[]).join('<br>'),
+                      confirmButtonColor:'#dc2626' });
+        } else {
+          showSuccess(r.message);
+        }
+        this.next();
+      } catch (e) { showError(e.message); }
+      finally { this.saving = false; }
+    },
+
+    async saveBenefit() {
+      if (!this.canSave) { showError('กรุณาเลือกผู้ป่วยและ Visit'); return; }
+      if (!this.benefit.ServiceItems.length) { showError('กรุณาเลือกบริการอย่างน้อย 1 รายการ'); return; }
+      if (!await this._confirmSave_('บันทึกรายงานบริการ '+this.benefit.ServiceItems.length+' รายการ?')) return;
+      this.saving = true;
+      try {
+        const r = await rpc('api_saveBenefitReport', this.$root.token, {
+          PatientID: this.selectedPatientId,
+          FiscalYear: this.benefit.FiscalYear,
+          ReportMonth: this.benefit.ReportMonth,
+          ServiceItems: this.benefit.ServiceItems,
+          Notes: this.benefit.Notes
+        });
+        if (!r.success) { showError(r.message); return; }
+        Swal.fire({ icon:'success', title:'🎉 ทำแบบประเมินครบแล้ว!',
+                    text:r.message, confirmButtonText:'กลับหน้าหลัก' })
+            .then(()=> this.$root.showPage('dashboard'));
+      } catch (e) { showError(e.message); }
+      finally { this.saving = false; }
+    },
+
+    // ── Helpers ──
+    patientLabel() {
+      const p = this.patients.find(x => x.PatientID === this.selectedPatientId);
+      return p ? p.FullName : '-';
+    },
+    visitLabel() {
+      const v = this.visits.find(x => x.VisitID === this.selectedVisitId);
+      return v ? ('ครั้งที่ ' + v.VisitNo + ' · ' + this.formatDate(v.VisitDate)) : '-';
+    },
+    formatDate(d) { return this.$root.formatThaiDate(d); },
+    thaiMonth(m) {
+      return ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.',
+              'ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][m];
+    },
+    colorClass(c) {
+      return ({ green:'text-green-700', blue:'text-blue-700', yellow:'text-yellow-700',
+                orange:'text-orange-700', red:'text-red-700' })[c] || 'text-slate-700';
+    }
+  };
+}
+</script>

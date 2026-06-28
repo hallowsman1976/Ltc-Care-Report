@@ -1,0 +1,18 @@
+# ── ไฟล์/โฟลเดอร์ที่ไม่ push ขึ้น Google Apps Script ──
+# build tooling (รันฝั่ง Node เท่านั้น)
+build-web.js
+package.json
+package-lock.json
+node_modules/**
+
+# static frontend สำหรับ GitHub Pages (ไม่เกี่ยวกับ GAS)
+docs/**
+
+# เอกสาร
+**/*.md
+
+# git / clasp config
+.git/**
+.gitignore
+.claspignore
+.clasp.json

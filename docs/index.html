@@ -1,0 +1,3722 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="theme-color" content="#1e40af">
+  <title>LTC Care Report — ระบบรายงานการดูแลผู้สูงอายุ</title>
+
+  <!-- Fonts: Noto Sans Thai -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Noto Sans Thai', 'system-ui', 'sans-serif'] },
+          colors: {
+            primary: {
+              50:'#eff6ff', 100:'#dbeafe', 200:'#bfdbfe', 300:'#93c5fd',
+              400:'#60a5fa', 500:'#3b82f6', 600:'#2563eb', 700:'#1d4ed8',
+              800:'#1e40af', 900:'#1e3a8a'
+            },
+            accent: {
+              50:'#f0fdf4', 100:'#dcfce7', 200:'#bbf7d0', 300:'#86efac',
+              400:'#4ade80', 500:'#22c55e', 600:'#16a34a', 700:'#15803d'
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- Leaflet (Map) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+
+  <style>
+/* ============================================================
+   LTC Care Report — Stylesheet (Phase 5)
+   Mobile-first · Blue / White / Green theme
+   ============================================================ */
+
+[x-cloak] { display: none !important; }
+
+* { -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  font-family: 'Noto Sans Thai', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Login Background ──────────────────────────────────── */
+.login-bg {
+  background:
+    radial-gradient(circle at 20% 0%, #3b82f6 0%, transparent 50%),
+    radial-gradient(circle at 80% 100%, #16a34a 0%, transparent 50%),
+    linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #15803d 100%);
+}
+
+/* ── Card ───────────────────────────────────────────────── */
+.card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+  border: 1px solid #f1f5f9;
+}
+@media (min-width: 640px) {
+  .card { padding: 22px; }
+}
+
+/* ── Section Title ─────────────────────────────────────── */
+.section-title {
+  font-size: 13px; font-weight: 700; color: #475569;
+  letter-spacing: 0.02em; margin-bottom: 14px;
+  padding-bottom: 8px; border-bottom: 2px solid #f1f5f9;
+}
+
+/* ── Form ──────────────────────────────────────────────── */
+.form-label {
+  display: block; font-size: 13px; font-weight: 600;
+  color: #475569; margin-bottom: 6px;
+}
+.form-input {
+  width: 100%; padding: 11px 14px;
+  border: 1.5px solid #e2e8f0; border-radius: 12px;
+  font-size: 14px; font-family: inherit; background: #fff;
+  transition: border-color .15s, box-shadow .15s;
+}
+.form-input:focus {
+  outline: none; border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.15);
+}
+.form-input:disabled { background: #f8fafc; color: #94a3b8; }
+
+/* ── Buttons ───────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px; padding: 10px 18px; border-radius: 12px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: all .15s; border: none; font-family: inherit;
+  white-space: nowrap;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary   { background: #1d4ed8; color: #fff; }
+.btn-primary:hover:not(:disabled) { background: #1e40af; }
+.btn-success   { background: #16a34a; color: #fff; }
+.btn-success:hover:not(:disabled) { background: #15803d; }
+.btn-secondary { background: #f1f5f9; color: #334155; }
+.btn-secondary:hover:not(:disabled) { background: #e2e8f0; }
+.btn-danger    { background: #dc2626; color: #fff; }
+.btn-outline   { background: transparent; color: #1d4ed8; border: 1.5px solid #93c5fd; }
+.btn-outline:hover:not(:disabled) { background: #eff6ff; }
+.btn-lg        { padding: 12px 22px; font-size: 15px; border-radius: 14px; }
+.btn-sm        { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+
+/* ── Stat Card (Dashboard) ─────────────────────────────── */
+.stat-card {
+  background: #fff; border-radius: 16px; padding: 16px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04);
+  transition: transform .15s, box-shadow .15s;
+  display: flex; gap: 12px; align-items: flex-start;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.06);
+}
+.stat-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; flex-shrink: 0;
+}
+.stat-value {
+  font-size: 24px; font-weight: 800; line-height: 1.1;
+  color: #0f172a; letter-spacing: -0.02em;
+}
+.stat-label { font-size: 11px; color: #64748b; margin-top: 2px; }
+.stat-sub   { font-size: 10px; color: #94a3b8; margin-top: 4px; }
+
+/* Stat card color variants */
+.stat-blue    { border-left: 4px solid #2563eb; }
+.stat-blue    .stat-icon { background: #dbeafe; color: #1d4ed8; }
+.stat-green   { border-left: 4px solid #16a34a; }
+.stat-green   .stat-icon { background: #dcfce7; color: #15803d; }
+.stat-yellow  { border-left: 4px solid #ca8a04; }
+.stat-yellow  .stat-icon { background: #fef9c3; color: #a16207; }
+.stat-orange  { border-left: 4px solid #ea580c; }
+.stat-orange  .stat-icon { background: #ffedd5; color: #c2410c; }
+.stat-red     { border-left: 4px solid #dc2626; }
+.stat-red     .stat-icon { background: #fee2e2; color: #b91c1c; }
+.stat-purple  { border-left: 4px solid #9333ea; }
+.stat-purple  .stat-icon { background: #f3e8ff; color: #7e22ce; }
+.stat-pink    { border-left: 4px solid #db2777; }
+.stat-pink    .stat-icon { background: #fce7f3; color: #be185d; }
+.stat-slate   { border-left: 4px solid #475569; }
+.stat-slate   .stat-icon { background: #f1f5f9; color: #334155; }
+
+/* ── Badge ─────────────────────────────────────────────── */
+.badge {
+  display: inline-block; padding: 3px 9px; font-size: 11px;
+  font-weight: 600; border-radius: 8px; line-height: 1.4;
+}
+.badge-blue   { background: #dbeafe; color: #1e40af; }
+.badge-green  { background: #dcfce7; color: #15803d; }
+.badge-yellow { background: #fef9c3; color: #854d0e; }
+.badge-orange { background: #ffedd5; color: #9a3412; }
+.badge-red    { background: #fee2e2; color: #991b1b; }
+.badge-purple { background: #f3e8ff; color: #6b21a8; }
+.badge-gray   { background: #f1f5f9; color: #475569; }
+
+/* ── Chart Bar (CSS-only) ──────────────────────────────── */
+.chart-bar-wrap {
+  display: flex; align-items: flex-end; gap: 8px;
+  height: 160px; padding: 8px 4px 0;
+  border-bottom: 1.5px solid #e2e8f0;
+}
+.chart-bar {
+  flex: 1; background: linear-gradient(to top, #2563eb, #60a5fa);
+  border-radius: 6px 6px 0 0; min-height: 4px;
+  position: relative; transition: opacity .15s;
+}
+.chart-bar:hover { opacity: 0.85; }
+.chart-bar-value {
+  position: absolute; top: -18px; left: 50%;
+  transform: translateX(-50%); font-size: 10px;
+  font-weight: 700; color: #1e40af;
+}
+.chart-bar-label {
+  font-size: 9px; color: #64748b; text-align: center;
+  margin-top: 4px; line-height: 1.2;
+}
+
+/* ── Progress Bar (Horizontal) ─────────────────────────── */
+.progress-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.progress-label { width: 90px; font-size: 12px; color: #475569; font-weight: 500; flex-shrink: 0; }
+.progress-track {
+  flex: 1; height: 10px; background: #f1f5f9; border-radius: 6px; overflow: hidden;
+}
+.progress-fill { height: 100%; border-radius: 6px; transition: width .5s; }
+.progress-fill.blue   { background: linear-gradient(to right, #3b82f6, #2563eb); }
+.progress-fill.green  { background: linear-gradient(to right, #4ade80, #16a34a); }
+.progress-fill.yellow { background: linear-gradient(to right, #fbbf24, #ca8a04); }
+.progress-fill.red    { background: linear-gradient(to right, #f87171, #dc2626); }
+.progress-fill.gray   { background: linear-gradient(to right, #cbd5e1, #94a3b8); }
+.progress-value { width: 36px; font-size: 12px; font-weight: 700; text-align: right; color: #1e293b; }
+
+/* ── Loading Skeleton ──────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 8px;
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skeleton-text { height: 14px; }
+.skeleton-title { height: 22px; width: 50%; }
+.skeleton-card  { height: 90px; border-radius: 16px; }
+.skeleton-chart { height: 200px; border-radius: 16px; }
+
+/* ── Empty State ───────────────────────────────────────── */
+.empty-state {
+  text-align: center; padding: 40px 20px; color: #94a3b8;
+}
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.6; }
+
+/* ── Filter Bar ────────────────────────────────────────── */
+.filter-bar {
+  background: #fff; border-radius: 16px; padding: 14px;
+  border: 1px solid #f1f5f9; margin-bottom: 16px;
+  display: grid; gap: 10px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 640px) {
+  .filter-bar { grid-template-columns: repeat(2, 1fr); padding: 16px; }
+}
+@media (min-width: 1024px) {
+  .filter-bar { grid-template-columns: repeat(5, 1fr) auto; }
+}
+.filter-bar .form-input { padding: 8px 12px; font-size: 13px; }
+
+/* ── Utilities ─────────────────────────────────────────── */
+.divider { height: 1px; background: #e2e8f0; margin: 16px 0; }
+
+/* Hide scrollbar but keep scrollable */
+.scroll-x { overflow-x: auto; }
+.scroll-x::-webkit-scrollbar { height: 4px; }
+.scroll-x::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+
+/* ── Photo thumbnails ──────────────────────────────────── */
+.photo-thumb {
+  position: relative; border-radius: 12px; overflow: hidden;
+  aspect-ratio: 1; background: #f1f5f9; border: 1px solid #e2e8f0;
+}
+.photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.photo-thumb .remove {
+  position: absolute; top: 4px; right: 4px;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: rgba(220,38,38,.9); color: #fff; border: none;
+  font-size: 14px; cursor: pointer; line-height: 1;
+}
+
+/* ── Print ─────────────────────────────────────────────── */
+@media print {
+  aside, header, nav, .filter-bar, .btn, button { display: none !important; }
+  main { margin: 0 !important; padding: 0 !important; }
+  body { background: #fff !important; }
+  .card { box-shadow: none !important; border: 1px solid #cbd5e1 !important; page-break-inside: avoid; }
+  #ltc-map { display: none !important; }
+}
+</style>
+
+</head>
+
+<body class="bg-slate-50 text-slate-800 font-sans antialiased" x-data="app()" x-init="init()" x-cloak>
+  <!-- ตั้งค่า URL ของ GAS REST API (แก้ที่ docs/config.js) -->
+  <script src="config.js"></script>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- ── 1. LOGIN PAGE ─────────────────────────────────────── -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <div x-show="!user" class="min-h-screen flex items-center justify-center px-4 py-8 login-bg">
+    <div class="w-full max-w-md">
+      <!-- Logo -->
+      <div class="text-center mb-8">
+        <div class="w-20 h-20 bg-white rounded-3xl shadow-xl flex items-center justify-center mx-auto mb-4">
+          <span class="text-4xl">🏥</span>
+        </div>
+        <h1 class="text-2xl font-bold text-white drop-shadow">LTC Care Report</h1>
+        <p class="text-primary-100 text-sm mt-1">ระบบรายงานการดูแลผู้สูงอายุและผู้พึ่งพิง</p>
+        <p class="text-primary-200 text-xs mt-0.5" x-text="appConfig.ORG_NAME || ''"></p>
+      </div>
+
+      <!-- Login Form -->
+      <div class="bg-white rounded-2xl shadow-2xl p-6 sm:p-8">
+        <h2 class="text-lg font-bold text-slate-800 mb-1">เข้าสู่ระบบ</h2>
+        <p class="text-xs text-slate-500 mb-6">กรอกชื่อผู้ใช้และรหัสผ่านของท่าน</p>
+
+        <form @submit.prevent="doLogin()" class="space-y-4">
+          <div>
+            <label class="form-label">ชื่อผู้ใช้</label>
+            <input type="text" x-model="loginForm.username" class="form-input"
+                   placeholder="username" autocomplete="username" autocapitalize="off"
+                   :disabled="loginLoading" required>
+          </div>
+
+          <div>
+            <label class="form-label">รหัสผ่าน</label>
+            <div class="relative">
+              <input :type="showPass ? 'text' : 'password'"
+                     x-model="loginForm.password" class="form-input pr-12"
+                     placeholder="••••••••" autocomplete="current-password"
+                     :disabled="loginLoading" required>
+              <button type="button" @click="showPass = !showPass"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-lg">
+                <span x-text="showPass ? '🙈' : '👁️'"></span>
+              </button>
+            </div>
+          </div>
+
+          <div x-show="loginError"
+               class="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl flex gap-2 items-start">
+            <span>⚠️</span>
+            <span x-text="loginError"></span>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg w-full"
+                  :disabled="loginLoading">
+            <svg x-show="loginLoading" class="animate-spin w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+            </svg>
+            <span x-text="loginLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'"></span>
+          </button>
+        </form>
+
+        <p class="text-center text-xs text-slate-400 mt-6 leading-relaxed">
+          สำหรับ อสม. / ผู้ดูแล (CG) / Care Manager (CM)<br>
+          ติดต่อผู้ดูแลระบบเพื่อขอบัญชีผู้ใช้
+        </p>
+      </div>
+
+      <p class="text-center text-xs text-primary-100 mt-4">
+        NHSO LTC Benefit Package · v<span x-text="appConfig.APP_VERSION || ''"></span>
+      </p>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- ── 2. APP LAYOUT (After Login) ───────────────────────── -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <div x-show="user" class="min-h-screen flex flex-col md:flex-row">
+
+    <!-- ── Sidebar (Desktop) ── -->
+    <aside class="hidden md:flex md:flex-col md:w-60 md:fixed md:inset-y-0 bg-primary-800 text-white shadow-xl z-30">
+      <!-- Brand -->
+      <div class="px-5 py-5 border-b border-primary-700/50">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center text-xl">🏥</div>
+          <div>
+            <div class="font-bold text-sm leading-tight">LTC Care Report</div>
+            <div class="text-xs text-primary-200" x-text="appConfig.ORG_NAME || 'NHSO'"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Menu -->
+      <nav class="flex-1 px-3 py-4 overflow-y-auto space-y-1">
+        <template x-for="item in navItems" :key="item.page">
+          <button x-show="canAccess(item.roles)"
+                  @click="showPage(item.page)"
+                  :class="page === item.page ? 'bg-white/15 text-white' : 'text-primary-100 hover:bg-white/10'"
+                  class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition">
+            <span class="text-lg" x-text="item.icon"></span>
+            <span x-text="item.label"></span>
+          </button>
+        </template>
+      </nav>
+
+      <!-- User -->
+      <div class="px-3 py-3 border-t border-primary-700/50">
+        <div class="flex items-center gap-3 px-2 py-2">
+          <div class="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center font-semibold text-sm"
+               x-text="(user?.fullName||'?').substring(0,1)"></div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-semibold truncate" x-text="user?.fullName"></div>
+            <div class="text-xs text-primary-200" x-text="roleLabel(user?.role)"></div>
+          </div>
+        </div>
+        <button @click="logout()" class="w-full mt-2 px-3 py-2 text-sm rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-100 flex items-center gap-2 justify-center">
+          <span>🚪</span><span>ออกจากระบบ</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ── Top Bar (Mobile) ── -->
+    <header class="md:hidden sticky top-0 z-20 bg-primary-800 text-white px-4 py-3 flex items-center justify-between shadow">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">🏥</span>
+        <div>
+          <div class="font-bold text-sm">LTC Care Report</div>
+          <div class="text-xs text-primary-200" x-text="pageTitle()"></div>
+        </div>
+      </div>
+      <button @click="logout()" class="px-3 py-1.5 rounded-lg bg-red-500/20 text-xs">ออก</button>
+    </header>
+
+    <!-- ── Main Content ── -->
+    <main class="flex-1 md:ml-60 pb-20 md:pb-6" id="main">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+
+        <!-- Page: Dashboard -->
+        <div x-show="page === 'dashboard'">
+          <!-- ============================================================
+     Dashboard View (Phase 5)
+     ============================================================ -->
+
+<!-- ── Header ── -->
+<div class="flex items-center justify-between mb-5">
+  <div>
+    <h1 class="text-xl sm:text-2xl font-bold text-slate-800">📊 หน้าหลัก</h1>
+    <p class="text-xs text-slate-500 mt-0.5">
+      ภาพรวมระบบการดูแลผู้สูงอายุและผู้พึ่งพิง
+      <span x-show="dashboard?.generatedAt">
+        · อัปเดต <span x-text="formatThaiDate(dashboard.generatedAt)"></span>
+      </span>
+    </p>
+  </div>
+  <button @click="loadDashboard()" class="btn btn-secondary btn-sm" :disabled="dashboardLoading">
+    <span x-text="dashboardLoading ? '⏳' : '🔄'"></span>
+    <span class="hidden sm:inline">รีเฟรช</span>
+  </button>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- ── FILTER BAR ────────────────────────────────────────── -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="filter-bar">
+  <div>
+    <label class="form-label">📅 วันที่เริ่ม</label>
+    <input type="date" x-model="filter.dateFrom" class="form-input">
+  </div>
+  <div>
+    <label class="form-label">📅 วันที่สิ้นสุด</label>
+    <input type="date" x-model="filter.dateTo" class="form-input">
+  </div>
+  <div>
+    <label class="form-label">🏘️ หมู่บ้าน</label>
+    <select x-model="filter.village" class="form-input">
+      <option value="">ทุกหมู่บ้าน</option>
+      <template x-for="v in (dashboard?.filterOptions?.villages || [])" :key="v">
+        <option :value="v" x-text="v"></option>
+      </template>
+    </select>
+  </div>
+  <div>
+    <label class="form-label">👨‍⚕️ Care Manager</label>
+    <select x-model="filter.careManagerId" class="form-input">
+      <option value="">ทั้งหมด</option>
+      <template x-for="cg in (dashboard?.filterOptions?.caregivers || []).filter(c=>c.role==='cm')" :key="cg.userId">
+        <option :value="cg.userId" x-text="cg.fullName"></option>
+      </template>
+    </select>
+  </div>
+  <div>
+    <label class="form-label">👩‍⚕️ Caregiver</label>
+    <select x-model="filter.caregiverId" class="form-input">
+      <option value="">ทั้งหมด</option>
+      <template x-for="cg in (dashboard?.filterOptions?.caregivers || []).filter(c=>c.role==='cg')" :key="cg.userId">
+        <option :value="cg.userId" x-text="cg.fullName"></option>
+      </template>
+    </select>
+  </div>
+  <div class="flex gap-2 items-end">
+    <button @click="applyFilter()" class="btn btn-primary flex-1">🔍 กรอง</button>
+    <button @click="resetFilter()" class="btn btn-secondary">↺</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- ── LOADING SKELETON ──────────────────────────────────── -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div x-show="dashboardLoading">
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
+    <template x-for="i in 8"><div class="skeleton skeleton-card"></div></template>
+  </div>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <template x-for="i in 4"><div class="skeleton skeleton-chart"></div></template>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- ── ERROR STATE ──────────────────────────────────────── -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div x-show="!dashboardLoading && dashboardError" class="card text-center py-12">
+  <div class="text-5xl mb-3">⚠️</div>
+  <h3 class="font-bold text-red-700">ไม่สามารถโหลดข้อมูลได้</h3>
+  <p class="text-sm text-slate-500 mt-2" x-text="dashboardError"></p>
+  <button @click="loadDashboard()" class="btn btn-primary mt-4">ลองอีกครั้ง</button>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- ── DASHBOARD CONTENT ─────────────────────────────────── -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div x-show="!dashboardLoading && !dashboardError && dashboard">
+
+  <!-- ── 8 Stat Cards ─────────────────────────────────────── -->
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
+    <!-- 1. All Cases -->
+    <div class="stat-card stat-blue">
+      <div class="stat-icon">👥</div>
+      <div>
+        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.totalCases)"></div>
+        <div class="stat-label">เคสทั้งหมด</div>
+      </div>
+    </div>
+
+    <!-- 2. Elderly with Dependency -->
+    <div class="stat-card stat-orange">
+      <div class="stat-icon">👴</div>
+      <div>
+        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.elderlyDependent)"></div>
+        <div class="stat-label">ผู้สูงอายุพึ่งพิง</div>
+        <div class="stat-sub">อายุ ≥ 60 ปี · ADL ≤ 11</div>
+      </div>
+    </div>
+
+    <!-- 3. Other Dependents -->
+    <div class="stat-card stat-purple">
+      <div class="stat-icon">🧑‍🦽</div>
+      <div>
+        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.otherDependent)"></div>
+        <div class="stat-label">ผู้พึ่งพิงรายอื่น</div>
+        <div class="stat-sub">อายุ &lt; 60 ปี · ADL ≤ 11</div>
+      </div>
+    </div>
+
+    <!-- 4. Visits This Month -->
+    <div class="stat-card stat-green">
+      <div class="stat-icon">🏠</div>
+      <div>
+        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.visitsThisMonth)"></div>
+        <div class="stat-label">เยี่ยมเดือนนี้</div>
+      </div>
+    </div>
+
+    <!-- 5. Nearing Visit -->
+    <div class="stat-card stat-yellow">
+      <div class="stat-icon">⏰</div>
+      <div>
+        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.nearingVisitCount)"></div>
+        <div class="stat-label">ใกล้ครบกำหนด</div>
+        <div class="stat-sub">ภายใน 7 วัน</div>
+      </div>
+    </div>
+
+    <!-- 6. Overdue -->
+    <div class="stat-card stat-red">
+      <div class="stat-icon">⚠️</div>
+      <div>
+        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.overdueCount)"></div>
+        <div class="stat-label">เลยกำหนดเยี่ยม</div>
+      </div>
+    </div>
+
+    <!-- 7. High-Risk Mental Health -->
+    <div class="stat-card stat-pink">
+      <div class="stat-icon">🧠</div>
+      <div>
+        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.highRiskMental)"></div>
+        <div class="stat-label">สุขภาพจิตเสี่ยงสูง</div>
+      </div>
+    </div>
+
+    <!-- 8. Palliative Care -->
+    <div class="stat-card stat-slate">
+      <div class="stat-icon">🕊️</div>
+      <div>
+        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.palliativeCount)"></div>
+        <div class="stat-label">Palliative Care</div>
+        <div class="stat-sub">PPS ≤ 30%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- ── CHARTS / SUMMARY ──────────────────────────────────── -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+    <!-- (1) จำนวนเคสตามหมู่บ้าน -->
+    <div class="card">
+      <div class="section-title">🏘️ จำนวนเคสตามหมู่บ้าน</div>
+      <div x-show="!dashboard.charts.byVillage.length" class="empty-state">
+        <div class="icon">📭</div>
+        <p>ไม่มีข้อมูล</p>
+      </div>
+      <div x-show="dashboard.charts.byVillage.length" class="space-y-2.5 max-h-72 overflow-y-auto pr-2">
+        <template x-for="v in dashboard.charts.byVillage" :key="v.name">
+          <div class="progress-row">
+            <div class="progress-label" x-text="v.name"></div>
+            <div class="progress-track">
+              <div class="progress-fill blue"
+                   :style="`width: ${(v.count / maxValue(dashboard.charts.byVillage, 'count')) * 100}%`"></div>
+            </div>
+            <div class="progress-value" x-text="v.count"></div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- (2) จำนวนเคสตาม ADL/TAI Group -->
+    <div class="card">
+      <div class="section-title">🎯 จำนวนเคสตาม TAI Group (ADL)</div>
+      <div class="space-y-2.5">
+        <template x-for="g in dashboard.charts.byTaiGroup" :key="g.group">
+          <div class="progress-row">
+            <div class="progress-label" x-text="g.group"></div>
+            <div class="progress-track">
+              <div class="progress-fill"
+                   :class="g.group.includes('1')?'green':g.group.includes('2')?'yellow':g.group.includes('ไม่ระบุ')?'gray':'red'"
+                   :style="`width: ${(g.count / maxValue(dashboard.charts.byTaiGroup, 'count')) * 100}%`"></div>
+            </div>
+            <div class="progress-value" x-text="g.count"></div>
+          </div>
+        </template>
+      </div>
+      <div class="divider"></div>
+      <div class="grid grid-cols-4 gap-1.5 text-center">
+        <div class="bg-accent-50 rounded-lg py-2">
+          <div class="text-base font-bold text-accent-700"
+               x-text="dashboard.charts.byTaiGroup.find(g=>g.group.includes('1'))?.count||0"></div>
+          <div class="text-[10px] text-slate-500">ติดสังคม</div>
+        </div>
+        <div class="bg-yellow-50 rounded-lg py-2">
+          <div class="text-base font-bold text-yellow-700"
+               x-text="dashboard.charts.byTaiGroup.find(g=>g.group.includes('2'))?.count||0"></div>
+          <div class="text-[10px] text-slate-500">ติดบ้าน</div>
+        </div>
+        <div class="bg-red-50 rounded-lg py-2">
+          <div class="text-base font-bold text-red-700"
+               x-text="dashboard.charts.byTaiGroup.find(g=>g.group.includes('3'))?.count||0"></div>
+          <div class="text-[10px] text-slate-500">ติดเตียง</div>
+        </div>
+        <div class="bg-purple-50 rounded-lg py-2">
+          <div class="text-base font-bold text-purple-700"
+               x-text="dashboard.charts.byTaiGroup.find(g=>g.group.includes('4'))?.count||0"></div>
+          <div class="text-[10px] text-slate-500">+สมองเสื่อม</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- (3) แนวโน้มการเยี่ยมรายเดือน -->
+    <div class="card lg:col-span-2">
+      <div class="section-title">📈 แนวโน้มการเยี่ยมบ้าน 12 เดือนล่าสุด</div>
+      <div class="chart-bar-wrap scroll-x">
+        <template x-for="m in dashboard.charts.monthlyTrend" :key="m.month">
+          <div class="flex flex-col items-center min-w-[40px] flex-1">
+            <div class="chart-bar w-full" :style="`height: ${barHeight(m.count, maxValue(dashboard.charts.monthlyTrend, 'count'))}`">
+              <div class="chart-bar-value" x-show="m.count > 0" x-text="m.count"></div>
+            </div>
+            <div class="chart-bar-label" x-text="formatMonth(m.month)"></div>
+          </div>
+        </template>
+      </div>
+      <p class="text-xs text-slate-400 mt-2 text-center">
+        ยอดรวม
+        <span class="font-bold text-primary-700"
+              x-text="formatNumber(dashboard.charts.monthlyTrend.reduce((s,m)=>s+m.count,0))"></span>
+        ครั้งเยี่ยม
+      </p>
+    </div>
+
+    <!-- (4) สถานะแผนการดูแล -->
+    <div class="card lg:col-span-2">
+      <div class="section-title">📋 สถานะแผนการดูแล (Care Plans)</div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <template x-for="ps in dashboard.charts.planStatus" :key="ps.status">
+          <div class="text-center p-4 rounded-xl"
+               :class="ps.status==='active'?'bg-accent-50':ps.status==='completed'?'bg-primary-50':ps.status==='cancelled'?'bg-red-50':'bg-slate-50'">
+            <div class="text-2xl font-bold"
+                 :class="ps.status==='active'?'text-accent-700':ps.status==='completed'?'text-primary-700':ps.status==='cancelled'?'text-red-700':'text-slate-600'"
+                 x-text="formatNumber(ps.count)"></div>
+            <div class="text-xs text-slate-600 mt-1" x-text="statusLabel(ps.status)"></div>
+            <span class="badge mt-1.5 inline-block" :class="'badge-' + statusColor(ps.status)" x-text="ps.status"></span>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Footer ── -->
+  <div class="text-center mt-8 mb-4 text-xs text-slate-400">
+    👤 <span x-text="dashboard.user?.fullName"></span> · <span x-text="roleLabel(dashboard.user?.role)"></span>
+    · LTC Care Report v<span x-text="appConfig.APP_VERSION || ''"></span>
+  </div>
+</div>
+
+        </div>
+
+        <!-- Page: Patients (Case Form) -->
+        <div x-show="page === 'patients'">
+          <!-- ============================================================
+     case-form.html — Patient (Case) Management Form
+     ============================================================ -->
+<div x-data="caseForm()" x-init="init()">
+
+  <!-- ── Header ── -->
+  <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+    <div>
+      <h1 class="text-xl sm:text-2xl font-bold text-slate-800">👥 ผู้รับบริการ</h1>
+      <p class="text-xs text-slate-500 mt-0.5">
+        ทั้งหมด <span class="font-semibold" x-text="patients.length"></span> ราย
+        · กรองอยู่ <span class="font-semibold text-primary-700" x-text="filtered.length"></span> ราย
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <button @click="loadPatients()" class="btn btn-secondary btn-sm" :disabled="loading">🔄</button>
+      <button @click="openAdd()" class="btn btn-primary btn-sm" x-show="canCreate">+ เพิ่มผู้รับบริการ</button>
+    </div>
+  </div>
+
+  <!-- ── Search bar ── -->
+  <div class="card mb-4 p-3">
+    <div class="flex gap-2 items-center">
+      <div class="flex-1 relative">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+        <input type="text" x-model="search" @input.debounce.300ms="applyFilter()"
+               class="form-input pl-10" placeholder="ค้นหาชื่อ / CID / HN / หมู่บ้าน...">
+      </div>
+      <button @click="search=''; applyFilter()" x-show="search" class="btn btn-secondary btn-sm">✕</button>
+    </div>
+  </div>
+
+  <!-- ── Loading ── -->
+  <div x-show="loading">
+    <template x-for="i in 5">
+      <div class="skeleton h-20 mb-2 rounded-2xl"></div>
+    </template>
+  </div>
+
+  <!-- ── Patient List (mobile cards + desktop table) ── -->
+  <div x-show="!loading && filtered.length">
+    <!-- Mobile cards -->
+    <div class="md:hidden space-y-2">
+      <template x-for="p in filtered" :key="p.PatientID">
+        <div class="card p-3" @click="openDetail(p)">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0"
+                 :class="p.Sex==='หญิง'?'bg-pink-400':'bg-primary-500'"
+                 x-text="(p.FullName||'?').substring(0,1)"></div>
+            <div class="flex-1 min-w-0">
+              <div class="font-semibold text-slate-800 truncate" x-text="p.FullName"></div>
+              <div class="text-xs text-slate-500 mt-0.5">
+                HN: <span x-text="p.HN||'-'"></span> · <span x-text="p.Age||'-'"></span> ปี · <span x-text="p.Sex||'-'"></span>
+              </div>
+              <div class="text-xs text-slate-400 mt-0.5 font-mono" x-text="p.CIDMasked||p.CID||'-'"></div>
+              <div class="flex flex-wrap gap-1 mt-2">
+                <span x-show="p.TAIGroup" class="badge" :class="taiBadge(p.TAIGroup)" x-text="p.TAIGroup"></span>
+                <span x-show="p.ADLScore!==''" class="badge badge-blue" x-text="'ADL '+p.ADLScore+'/20'"></span>
+                <span x-show="p.VillageName||p.VillageNo" class="badge badge-gray"
+                      x-text="(p.VillageName||('ม.'+p.VillageNo))"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Desktop table -->
+    <div class="hidden md:block card p-0 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 text-slate-600">
+            <tr>
+              <th class="text-left px-4 py-3">ชื่อ-นามสกุล</th>
+              <th class="text-left px-4 py-3">HN</th>
+              <th class="text-left px-4 py-3">CID (Masked)</th>
+              <th class="text-center px-4 py-3">อายุ/เพศ</th>
+              <th class="text-left px-4 py-3">หมู่บ้าน</th>
+              <th class="text-center px-4 py-3">TAI / ADL</th>
+              <th class="text-left px-4 py-3">CG/CM</th>
+              <th class="text-center px-4 py-3">การจัดการ</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            <template x-for="p in filtered" :key="p.PatientID">
+              <tr class="hover:bg-slate-50">
+                <td class="px-4 py-3 font-medium" x-text="p.FullName"></td>
+                <td class="px-4 py-3 font-mono text-xs" x-text="p.HN||'-'"></td>
+                <td class="px-4 py-3 font-mono text-xs text-slate-500" x-text="p.CIDMasked||p.CID||'-'"></td>
+                <td class="px-4 py-3 text-center" x-text="(p.Age||'-')+' / '+(p.Sex||'-')"></td>
+                <td class="px-4 py-3 text-xs" x-text="p.VillageName||('ม.'+(p.VillageNo||'-'))"></td>
+                <td class="px-4 py-3 text-center">
+                  <div x-show="p.TAIGroup"><span class="badge" :class="taiBadge(p.TAIGroup)" x-text="p.TAIGroup"></span></div>
+                  <div x-show="p.ADLScore!==''" class="text-xs text-slate-400 mt-0.5" x-text="'ADL '+p.ADLScore"></div>
+                </td>
+                <td class="px-4 py-3 text-xs text-slate-500">
+                  <div>CM: <span x-text="userName(p.CareManagerID)||'-'"></span></div>
+                  <div>CG: <span x-text="userName(p.CaregiverID)||'-'"></span></div>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <button @click="openDetail(p)" class="btn btn-outline btn-sm">📋 ดู</button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Empty ── -->
+  <div x-show="!loading && !filtered.length" class="empty-state">
+    <div class="icon">📭</div>
+    <p x-show="search">ไม่พบผู้รับบริการที่ตรงกับ "<span x-text="search"></span>"</p>
+    <p x-show="!search">ยังไม่มีผู้รับบริการในระบบ</p>
+    <button x-show="canCreate" @click="openAdd()" class="btn btn-primary mt-4">+ เพิ่มผู้รับบริการ</button>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- ── ADD/EDIT MODAL ────────────────────────────────────── -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <div x-show="showForm" x-cloak
+       class="fixed inset-0 bg-black/50 z-40 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
+       @click.self="closeForm()">
+    <div class="bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl shadow-2xl max-h-[95vh] flex flex-col">
+
+      <div class="px-5 py-4 border-b flex items-center justify-between sticky top-0 bg-white rounded-t-2xl">
+        <h3 class="font-bold text-slate-800" x-text="editingId ? '✏️ แก้ไขข้อมูลผู้รับบริการ' : '➕ เพิ่มผู้รับบริการใหม่'"></h3>
+        <button @click="closeForm()" class="text-2xl text-slate-400 hover:text-slate-700">&times;</button>
+      </div>
+
+      <form @submit.prevent="submitForm()" class="overflow-y-auto p-5 flex-1 space-y-5">
+
+        <!-- Section: ข้อมูลส่วนตัว -->
+        <div>
+          <div class="section-title">👤 ข้อมูลส่วนตัว</div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="sm:col-span-2">
+              <label class="form-label">ชื่อ-นามสกุล <span class="text-red-500">*</span></label>
+              <input type="text" x-model="form.FullName" class="form-input" required>
+            </div>
+            <div>
+              <label class="form-label">เพศ <span class="text-red-500">*</span></label>
+              <select x-model="form.Sex" class="form-input" required>
+                <option value="">-- เลือก --</option>
+                <option>ชาย</option><option>หญิง</option><option>อื่นๆ</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">วันเดือนปีเกิด</label>
+              <input type="date" x-model="form.BirthDate" class="form-input">
+              <p x-show="form.BirthDate" class="text-xs text-slate-400 mt-1">
+                อายุ <span class="font-semibold text-primary-700" x-text="calcAge(form.BirthDate)"></span> ปี
+              </p>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="form-label">เลขบัตรประชาชน (13 หลัก)</label>
+              <div class="flex gap-2 items-start">
+                <input type="text" x-model="form.CID" @input="validateCIDLive()"
+                       maxlength="13" pattern="[0-9]*" inputmode="numeric"
+                       class="form-input font-mono" placeholder="1234567890123">
+                <button type="button" @click="validateCIDLive(true)" class="btn btn-secondary btn-sm flex-shrink-0">ตรวจสอบ</button>
+              </div>
+              <p x-show="cidStatus.msg" class="text-xs mt-1"
+                 :class="cidStatus.valid?'text-green-600':'text-red-600'"
+                 x-text="cidStatus.msg"></p>
+            </div>
+            <div>
+              <label class="form-label">HN</label>
+              <input type="text" x-model="form.HN" class="form-input">
+            </div>
+            <div>
+              <label class="form-label">โทรศัพท์ผู้ป่วย</label>
+              <input type="tel" x-model="form.Phone" class="form-input" placeholder="08x-xxx-xxxx">
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: ที่อยู่ + GPS -->
+        <div>
+          <div class="section-title">📍 ที่อยู่และพิกัด</div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="sm:col-span-2">
+              <label class="form-label">บ้านเลขที่/ซอย/ถนน</label>
+              <input type="text" x-model="form.Address" class="form-input">
+            </div>
+            <div>
+              <label class="form-label">หมู่ที่</label>
+              <input type="text" x-model="form.VillageNo" class="form-input">
+            </div>
+            <div>
+              <label class="form-label">ชื่อหมู่บ้าน</label>
+              <input type="text" x-model="form.VillageName" class="form-input">
+            </div>
+            <div>
+              <label class="form-label">ตำบล</label>
+              <input type="text" x-model="form.Subdistrict" class="form-input">
+            </div>
+            <div>
+              <label class="form-label">อำเภอ</label>
+              <input type="text" x-model="form.District" class="form-input">
+            </div>
+            <div>
+              <label class="form-label">จังหวัด</label>
+              <input type="text" x-model="form.Province" class="form-input">
+            </div>
+            <div></div>
+            <div>
+              <label class="form-label">Latitude (พิกัด)</label>
+              <input type="text" x-model="form.Latitude" class="form-input font-mono text-sm" placeholder="13.736717">
+            </div>
+            <div>
+              <label class="form-label">Longitude (พิกัด)</label>
+              <input type="text" x-model="form.Longitude" class="form-input font-mono text-sm" placeholder="100.523186">
+            </div>
+            <div class="sm:col-span-2">
+              <button type="button" @click="captureGPS()" class="btn btn-outline w-full">
+                📍 บันทึกพิกัด GPS อัตโนมัติ
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: ผู้ดูแลและสุขภาพ -->
+        <div>
+          <div class="section-title">🏥 ข้อมูลการดูแล LTC</div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="form-label">สิทธิ์การรักษา</label>
+              <select x-model="form.RightType" class="form-input">
+                <option value="">-- เลือก --</option>
+                <option>สิทธิ์บัตรทอง (UC)</option>
+                <option>ประกันสังคม</option>
+                <option>ข้าราชการ</option>
+                <option>ชำระเอง</option>
+                <option>อื่นๆ</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">ผู้ดูแลหลัก (ครอบครัว)</label>
+              <input type="text" x-model="form.MainCaregiverName" class="form-input">
+            </div>
+            <div>
+              <label class="form-label">เบอร์โทรผู้ดูแลหลัก</label>
+              <input type="tel" x-model="form.MainCaregiverPhone" class="form-input">
+            </div>
+            <div>
+              <label class="form-label">ความสัมพันธ์</label>
+              <input type="text" x-model="form.Relationship" class="form-input" placeholder="บุตร / ภรรยา / ลูกสะใภ้">
+            </div>
+            <div class="sm:col-span-2">
+              <label class="form-label">โรคประจำตัว / Disease</label>
+              <textarea x-model="form.Disease" rows="2" class="form-input" placeholder="เช่น เบาหวาน, ความดันสูง, อัมพฤกษ์ ซีกซ้าย"></textarea>
+            </div>
+            <div>
+              <label class="form-label">👨‍⚕️ Care Manager (CM)</label>
+              <select x-model="form.CareManagerID" class="form-input">
+                <option value="">-- เลือก --</option>
+                <template x-for="u in usersList.filter(u=>u.role==='cm'||u.role==='admin')" :key="u.userId">
+                  <option :value="u.userId" x-text="u.fullName"></option>
+                </template>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">👩‍⚕️ Caregiver (CG)</label>
+              <select x-model="form.CaregiverID" class="form-input">
+                <option value="">-- เลือก --</option>
+                <template x-for="u in usersList.filter(u=>u.role==='cg')" :key="u.userId">
+                  <option :value="u.userId" x-text="u.fullName"></option>
+                </template>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">วันที่ลงทะเบียน</label>
+              <input type="date" x-model="form.RegisterDate" class="form-input">
+            </div>
+            <div>
+              <label class="form-label">สถานะ</label>
+              <select x-model="form.Status" class="form-input">
+                <option value="active">ใช้งานอยู่</option>
+                <option value="discharged">ออกจากระบบ</option>
+                <option value="deceased">เสียชีวิต</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- PDPA Consent (บังคับสำหรับเพิ่มผู้ป่วยใหม่) -->
+        <div x-show="!editingId">
+          <label class="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-xl p-3 cursor-pointer">
+            <input type="checkbox" x-model="pdpaConsent" class="mt-0.5 w-5 h-5 accent-primary-600">
+            <span class="text-xs text-blue-900">
+              <b>ความยินยอมตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล (PDPA):</b>
+              ข้าพเจ้าได้รับความยินยอมจากผู้รับบริการ/ผู้แทนโดยชอบธรรม ในการเก็บรวบรวม ใช้
+              และประมวลผลข้อมูลส่วนบุคคลและข้อมูลสุขภาพ เพื่อการดูแลตามสิทธิประโยชน์ LTC เท่านั้น
+            </span>
+          </label>
+        </div>
+
+        <div class="flex gap-2 justify-end pt-4 border-t">
+          <button type="button" @click="closeForm()" class="btn btn-secondary">ยกเลิก</button>
+          <button type="submit" class="btn btn-primary" :disabled="saving">
+            <span x-text="saving ? 'กำลังบันทึก...' : '💾 บันทึก'"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- ── DETAIL + TIMELINE MODAL ───────────────────────────── -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <div x-show="showDetail" x-cloak
+       class="fixed inset-0 bg-black/50 z-40 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
+       @click.self="closeDetail()">
+    <div class="bg-white w-full sm:max-w-3xl sm:rounded-2xl rounded-t-2xl shadow-2xl max-h-[95vh] flex flex-col">
+      <div class="px-5 py-4 border-b flex items-center justify-between sticky top-0 bg-white rounded-t-2xl">
+        <div>
+          <h3 class="font-bold text-slate-800" x-text="detail?.patient?.FullName||'-'"></h3>
+          <p class="text-xs text-slate-500 mt-0.5">
+            HN: <span x-text="detail?.patient?.HN||'-'"></span> ·
+            <span x-text="detail?.patient?.Age||'-'"></span> ปี ·
+            <span x-text="detail?.patient?.Sex||'-'"></span>
+          </p>
+        </div>
+        <div class="flex gap-2">
+          <button x-show="canCreate" @click="openEdit(detail.patient)" class="btn btn-outline btn-sm">✏️ แก้ไข</button>
+          <button @click="closeDetail()" class="text-2xl text-slate-400 hover:text-slate-700 px-2">&times;</button>
+        </div>
+      </div>
+
+      <div class="overflow-y-auto p-5 flex-1">
+        <!-- Patient summary -->
+        <div class="grid grid-cols-2 gap-3 mb-5">
+          <div class="bg-slate-50 rounded-xl p-3">
+            <div class="text-xs text-slate-500">CID</div>
+            <div class="font-mono text-sm font-semibold" x-text="detail?.patient?.CIDMasked||detail?.patient?.CID||'-'"></div>
+          </div>
+          <div class="bg-slate-50 rounded-xl p-3">
+            <div class="text-xs text-slate-500">โทรศัพท์</div>
+            <div class="font-mono text-sm font-semibold" x-text="detail?.patient?.Phone||'-'"></div>
+          </div>
+          <div class="bg-blue-50 rounded-xl p-3">
+            <div class="text-xs text-slate-500">ADL Score</div>
+            <div class="font-bold text-blue-700" x-text="(detail?.patient?.ADLScore||'-')+' / 20'"></div>
+          </div>
+          <div class="bg-purple-50 rounded-xl p-3">
+            <div class="text-xs text-slate-500">TAI Group</div>
+            <div class="font-bold text-purple-700 text-sm" x-text="detail?.patient?.TAIGroup||'ยังไม่ประเมิน'"></div>
+          </div>
+        </div>
+        <div class="mb-4 p-3 rounded-xl bg-slate-50">
+          <div class="text-xs text-slate-500 mb-1">📍 ที่อยู่</div>
+          <div class="text-sm" x-text="patientAddress(detail?.patient)"></div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="section-title">📜 ประวัติการดูแล (Timeline)</div>
+        <div x-show="!detail?.timeline?.length" class="empty-state">
+          <div class="icon">⏳</div>
+          <p>ยังไม่มีประวัติการดูแล</p>
+        </div>
+        <div class="relative space-y-3" x-show="detail?.timeline?.length">
+          <template x-for="e in detail.timeline" :key="e.id">
+            <div class="flex gap-3 items-start">
+              <div class="w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0"
+                   :class="timelineColor(e.type)" x-text="timelineIcon(e.type)"></div>
+              <div class="flex-1 bg-slate-50 rounded-xl p-3 min-w-0">
+                <div class="flex items-center justify-between gap-2 flex-wrap">
+                  <span class="font-semibold text-sm text-slate-800" x-text="e.title"></span>
+                  <span class="text-xs text-slate-500" x-text="formatThaiDate(e.date)"></span>
+                </div>
+                <div x-show="e.summary" class="text-xs text-slate-600 mt-1" x-text="e.summary"></div>
+                <div x-show="e.visitorName" class="text-xs text-slate-400 mt-1">
+                  ผู้บันทึก: <span x-text="e.visitorName"></span>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function caseForm() {
+  return {
+    // ── State ──
+    patients: [], filtered: [],
+    usersList: [],
+    search: '',
+    loading: true,
+    showForm: false,
+    showDetail: false,
+    editingId: null,
+    saving: false,
+    form: this.blankForm(),
+    cidStatus: { valid: null, msg: '' },
+    pdpaConsent: false,
+    detail: null,
+
+    blankForm() {
+      return {
+        FullName:'', Sex:'', BirthDate:'', CID:'', HN:'', Phone:'',
+        Address:'', VillageNo:'', VillageName:'', Subdistrict:'', District:'', Province:'',
+        Latitude:'', Longitude:'',
+        RightType:'', MainCaregiverName:'', MainCaregiverPhone:'', Relationship:'',
+        Disease:'', CareManagerID:'', CaregiverID:'',
+        RegisterDate:'', Status:'active'
+      };
+    },
+
+    get canCreate() {
+      const r = this.$root.user?.role;
+      return r === 'admin' || r === 'cm';
+    },
+
+    async init() {
+      await Promise.all([this.loadPatients(), this.loadUsers()]);
+    },
+
+    async loadPatients() {
+      this.loading = true;
+      try {
+        const r = await rpc('api_getPatients', this.$root.token, {});
+        if (!r.success) { showError(r.message); return; }
+        this.patients = r.data || [];
+        this.applyFilter();
+      } catch (e) {
+        showError(e.message || 'โหลดรายชื่อไม่สำเร็จ');
+      } finally { this.loading = false; }
+    },
+
+    async loadUsers() {
+      try {
+        const r = await rpc('api_getCaregivers', this.$root.token);
+        if (r.success) this.usersList = r.data || [];
+      } catch (e) {}
+    },
+
+    applyFilter() {
+      const q = (this.search || '').trim().toLowerCase();
+      if (!q) { this.filtered = [...this.patients]; return; }
+      this.filtered = this.patients.filter(p => {
+        return (p.FullName && p.FullName.toLowerCase().includes(q)) ||
+               (p.HN && String(p.HN).toLowerCase().includes(q)) ||
+               (p.VillageName && p.VillageName.toLowerCase().includes(q)) ||
+               (String(p.VillageNo||'').toLowerCase().includes(q)) ||
+               (String(p.CID||'').includes(q));
+      });
+    },
+
+    openAdd() {
+      this.editingId = null;
+      this.form = this.blankForm();
+      this.form.RegisterDate = new Date().toISOString().split('T')[0];
+      this.cidStatus = { valid:null, msg:'' };
+      this.pdpaConsent = false;
+      this.showForm = true;
+    },
+
+    openEdit(p) {
+      this.editingId = p.PatientID;
+      this.form = {
+        FullName: p.FullName||'', Sex: p.Sex||'',
+        BirthDate: (p.BirthDate||'').split('T')[0],
+        CID:'', HN: p.HN||'', Phone: p.Phone||'', // CID ไม่ส่งกลับ (masked) — เว้นไว้
+        Address: p.Address||'', VillageNo: p.VillageNo||'', VillageName: p.VillageName||'',
+        Subdistrict: p.Subdistrict||'', District: p.District||'', Province: p.Province||'',
+        Latitude: p.Latitude||'', Longitude: p.Longitude||'',
+        RightType: p.RightType||'',
+        MainCaregiverName: p.MainCaregiverName||'', MainCaregiverPhone: p.MainCaregiverPhone||'',
+        Relationship: p.Relationship||'',
+        Disease: p.Disease||'',
+        CareManagerID: p.CareManagerID||'', CaregiverID: p.CaregiverID||'',
+        RegisterDate: (p.RegisterDate||'').split('T')[0],
+        Status: p.Status||'active'
+      };
+      this.cidStatus = { valid:null, msg:'(เลข CID ถูกซ่อนเพื่อความปลอดภัย เว้นว่างหากไม่ต้องการเปลี่ยน)' };
+      this.showDetail = false;
+      this.showForm = true;
+    },
+
+    closeForm() { this.showForm = false; },
+
+    async validateCIDLive(showResult) {
+      const cid = String(this.form.CID || '').replace(/\D/g, '');
+      this.form.CID = cid;
+      if (cid.length === 0) { this.cidStatus = { valid:null, msg:'' }; return; }
+      if (cid.length !== 13) {
+        this.cidStatus = { valid:false, msg:'CID ต้องมี 13 หลัก (ปัจจุบัน '+cid.length+')' };
+        return;
+      }
+      try {
+        const r = await rpc('api_validateCID', cid);
+        this.cidStatus = {
+          valid: r.data?.valid,
+          msg: r.data?.valid ? '✓ เลขบัตรประชาชนถูกต้อง' : (r.message || 'CID ไม่ถูกต้อง')
+        };
+        if (showResult && r.data?.valid) showSuccess('CID ถูกต้อง');
+      } catch (e) {
+        this.cidStatus = { valid:false, msg:'ตรวจสอบไม่สำเร็จ' };
+      }
+    },
+
+    async captureGPS() {
+      if (!navigator.geolocation) { showError('Browser นี้ไม่รองรับ GPS'); return; }
+      Swal.fire({ title:'📍 กำลังขอตำแหน่ง...', didOpen:()=>Swal.showLoading(), allowOutsideClick:false });
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          this.form.Latitude = pos.coords.latitude.toFixed(6);
+          this.form.Longitude = pos.coords.longitude.toFixed(6);
+          Swal.fire({ icon:'success', title:'บันทึกพิกัดแล้ว',
+                      html:`Lat: <b>${this.form.Latitude}</b><br>Lng: <b>${this.form.Longitude}</b>`,
+                      confirmButtonText:'ตกลง' });
+        },
+        err => Swal.fire({ icon:'error', title:'ไม่สามารถรับ GPS ได้', text: err.message }),
+        { enableHighAccuracy: true, timeout: 15000 }
+      );
+    },
+
+    async submitForm() {
+      // Validate
+      if (!this.form.FullName || !this.form.Sex) {
+        showError('กรุณากรอกชื่อ-นามสกุล และเพศ'); return;
+      }
+      if (this.form.CID && this.cidStatus.valid === false) {
+        showError('เลขบัตรประชาชนไม่ถูกต้อง'); return;
+      }
+      // PDPA consent บังคับสำหรับผู้ป่วยใหม่
+      if (!this.editingId && !this.pdpaConsent) {
+        showError('กรุณายืนยันความยินยอม PDPA ก่อนบันทึกข้อมูลผู้รับบริการ'); return;
+      }
+      // Confirm
+      const ok = await showConfirm(
+        this.editingId ? 'บันทึกการแก้ไข?' : 'เพิ่มผู้รับบริการใหม่?',
+        'ชื่อ: ' + this.form.FullName
+      );
+      if (!ok) return;
+
+      this.saving = true;
+      try {
+        // ── ตัดฟิลด์ CID ออกถ้าว่าง (กรณีแก้ไข — เพื่อไม่ overwrite) ──
+        const payload = { ...this.form };
+        if (this.editingId && !payload.CID) delete payload.CID;
+
+        const fn = this.editingId ? 'api_updatePatient' : 'api_savePatient';
+        const args = this.editingId
+          ? [this.$root.token, this.editingId, payload]
+          : [this.$root.token, payload];
+        const r = await rpc(fn, ...args);
+        if (!r.success) { showError(r.message); return; }
+        showSuccess(r.message || 'บันทึกสำเร็จ');
+        this.showForm = false;
+        await this.loadPatients();
+      } catch (e) {
+        showError(e.message || 'บันทึกไม่สำเร็จ');
+      } finally { this.saving = false; }
+    },
+
+    async openDetail(p) {
+      this.detail = { patient: p, timeline: [] };
+      this.showDetail = true;
+      try {
+        const r = await rpc('api_getPatientTimeline', this.$root.token, p.PatientID);
+        if (r.success) this.detail = r.data;
+      } catch (e) {
+        showError(e.message || 'โหลด timeline ไม่สำเร็จ');
+      }
+    },
+
+    closeDetail() { this.showDetail = false; this.detail = null; },
+
+    // ── Helpers ──
+    calcAge(birthDate) {
+      if (!birthDate) return '-';
+      const d = new Date(birthDate);
+      if (isNaN(d)) return '-';
+      const t = new Date();
+      let a = t.getFullYear() - d.getFullYear();
+      const m = t.getMonth() - d.getMonth();
+      if (m < 0 || (m === 0 && t.getDate() < d.getDate())) a--;
+      return a;
+    },
+
+    userName(id) {
+      if (!id) return '';
+      const u = this.usersList.find(x => x.userId === id);
+      return u ? u.fullName : '-';
+    },
+
+    taiBadge(group) {
+      const g = String(group||'');
+      if (g.includes('1')) return 'badge-green';
+      if (g.includes('2')) return 'badge-yellow';
+      if (g.includes('3')) return 'badge-orange';
+      if (g.includes('4')) return 'badge-red';
+      return 'badge-gray';
+    },
+
+    timelineIcon(type) {
+      return ({ careplan:'📋', visit:'🚪', vital:'💓', adl:'🧩',
+                ppsa:'🛏️', mental:'🧠', benefit:'✅' })[type] || '📌';
+    },
+    timelineColor(type) {
+      return ({
+        careplan:'bg-primary-50 text-primary-700',
+        visit:'bg-accent-50 text-accent-700',
+        vital:'bg-pink-50 text-pink-700',
+        adl:'bg-yellow-50 text-yellow-700',
+        ppsa:'bg-purple-50 text-purple-700',
+        mental:'bg-red-50 text-red-700',
+        benefit:'bg-blue-50 text-blue-700'
+      })[type] || 'bg-slate-100 text-slate-700';
+    },
+
+    patientAddress(p) {
+      if (!p) return '-';
+      return [p.Address, p.VillageName ? '('+p.VillageName+')' : '',
+              p.VillageNo ? 'ม.'+p.VillageNo : '', p.Subdistrict ? 'ต.'+p.Subdistrict : '',
+              p.District ? 'อ.'+p.District : '', p.Province ? 'จ.'+p.Province : '']
+              .filter(s => s).join(' ') || '-';
+    },
+
+    formatThaiDate(iso) { return this.$root.formatThaiDate(iso); }
+  };
+}
+</script>
+
+        </div>
+
+        <!-- Page: Visits -->
+        <div x-show="page === 'visits'">
+          <!-- ============================================================
+     visit-form.html — Home Visit Recording
+     ============================================================ -->
+<div x-data="visitForm()" x-init="init()">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+    <div>
+      <h1 class="text-xl sm:text-2xl font-bold text-slate-800">🚪 บันทึกการเยี่ยมบ้าน</h1>
+      <p class="text-xs text-slate-500 mt-0.5">เลือกผู้รับบริการและกรอกข้อมูลการเยี่ยม</p>
+    </div>
+    <div x-show="selectedPatient" class="text-right">
+      <div class="text-xs text-slate-500">ครั้งที่</div>
+      <div class="text-2xl font-bold text-primary-700" x-text="visitNo||'?'"></div>
+    </div>
+  </div>
+
+  <!-- ── 1. เลือกผู้ป่วย ── -->
+  <div class="card mb-4">
+    <div class="section-title">👤 เลือกผู้รับบริการ <span class="text-red-500">*</span></div>
+
+    <div class="relative">
+      <input type="text" x-model="patientSearch" @input="filterPatients()"
+             @focus="showDropdown=true"
+             class="form-input" placeholder="พิมพ์ชื่อ / HN / หมู่บ้าน...">
+      <div x-show="showDropdown && filteredPatients.length" x-cloak
+           @click.away="showDropdown=false"
+           class="absolute z-30 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg max-h-72 overflow-y-auto">
+        <template x-for="p in filteredPatients.slice(0,30)" :key="p.PatientID">
+          <button type="button" @click="selectPatient(p)"
+                  class="w-full text-left px-4 py-3 hover:bg-primary-50 border-b border-slate-100 flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
+                 :class="p.Sex==='หญิง'?'bg-pink-400':'bg-primary-500'"
+                 x-text="(p.FullName||'?').substring(0,1)"></div>
+            <div class="flex-1 min-w-0">
+              <div class="font-semibold text-sm truncate" x-text="p.FullName"></div>
+              <div class="text-xs text-slate-500">
+                HN: <span x-text="p.HN||'-'"></span> ·
+                <span x-text="(p.Age||'-')+' ปี'"></span> ·
+                <span x-text="p.VillageName||('ม.'+(p.VillageNo||'-'))"></span>
+              </div>
+            </div>
+            <span x-show="p.TAIGroup" class="badge text-[10px]" :class="taiBadge(p.TAIGroup)" x-text="p.TAIGroup"></span>
+          </button>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 2. Patient Summary ── -->
+  <div x-show="selectedPatient" x-cloak class="card mb-4">
+    <div class="flex items-start gap-4 flex-wrap">
+      <div class="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl flex-shrink-0"
+           :class="selectedPatient?.Sex==='หญิง'?'bg-pink-400':'bg-primary-500'"
+           x-text="(selectedPatient?.FullName||'?').substring(0,1)"></div>
+      <div class="flex-1 min-w-0">
+        <div class="font-bold text-slate-800" x-text="selectedPatient?.FullName"></div>
+        <div class="text-xs text-slate-500 mt-0.5">
+          HN: <span x-text="selectedPatient?.HN||'-'"></span> ·
+          <span x-text="selectedPatient?.Age||'-'"></span> ปี ·
+          <span x-text="selectedPatient?.Sex||'-'"></span> ·
+          📞 <span x-text="selectedPatient?.Phone||'-'"></span>
+        </div>
+        <div class="text-xs text-slate-500 mt-1">
+          📍 <span x-text="patientAddress(selectedPatient)"></span>
+        </div>
+        <div class="flex flex-wrap gap-1 mt-2">
+          <span x-show="selectedPatient?.TAIGroup" class="badge" :class="taiBadge(selectedPatient?.TAIGroup)"
+                x-text="selectedPatient?.TAIGroup"></span>
+          <span x-show="selectedPatient?.ADLScore!==''" class="badge badge-blue"
+                x-text="'ADL '+selectedPatient?.ADLScore+'/20'"></span>
+          <span x-show="selectedPatient?.PPSScore!==''" class="badge badge-purple"
+                x-text="'PPS '+selectedPatient?.PPSScore+'%'"></span>
+        </div>
+        <div x-show="selectedPatient?.Disease" class="text-xs text-slate-500 mt-2">
+          <span class="font-semibold">โรคประจำตัว:</span> <span x-text="selectedPatient?.Disease"></span>
+        </div>
+      </div>
+      <button @click="resetPatient()" class="btn btn-secondary btn-sm">เปลี่ยนผู้รับบริการ</button>
+    </div>
+  </div>
+
+  <!-- ── 3. Visit Form ── -->
+  <form x-show="selectedPatient" x-cloak @submit.prevent="submit()" class="space-y-4">
+
+    <!-- Visit metadata -->
+    <div class="card">
+      <div class="section-title">📅 ข้อมูลการเยี่ยม</div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="form-label">ครั้งที่</label>
+          <div class="form-input bg-slate-50 font-bold text-primary-700" x-text="visitNo||'-'"></div>
+        </div>
+        <div>
+          <label class="form-label">ประเภท <span class="text-red-500">*</span></label>
+          <select x-model="form.VisitType" class="form-input" required>
+            <option value="home_visit">🏠 เยี่ยมบ้าน</option>
+            <option value="clinic">🏥 พบที่คลินิก</option>
+            <option value="phone">📞 โทรติดตาม</option>
+            <option value="emergency">🚨 ฉุกเฉิน</option>
+            <option value="follow_up">📋 ติดตามผล</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">วันที่เยี่ยม <span class="text-red-500">*</span></label>
+          <input type="date" x-model="form.VisitDate" class="form-input" required>
+        </div>
+        <div></div>
+        <div>
+          <label class="form-label">เวลาเริ่ม</label>
+          <input type="time" x-model="form.StartTime" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">เวลาสิ้นสุด</label>
+          <input type="time" x-model="form.EndTime" class="form-input">
+        </div>
+        <div class="col-span-2">
+          <label class="form-label">👤 ผู้เยี่ยม</label>
+          <div class="form-input bg-slate-50" x-text="form.VisitorName||'-'"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main problem + care -->
+    <div class="card">
+      <div class="section-title">🩺 อาการและการดูแล</div>
+      <div class="space-y-3">
+        <div>
+          <label class="form-label">อาการหลัก / ปัญหาที่พบ <span class="text-red-500">*</span></label>
+          <textarea x-model="form.MainProblem" rows="2" required class="form-input"
+                    placeholder="เช่น ปวดเข่าทั้งสองข้าง บวม ออกแรงไม่ได้"></textarea>
+        </div>
+        <div>
+          <label class="form-label">การดูแลที่ให้</label>
+          <textarea x-model="form.CareProvided" rows="2" class="form-input"
+                    placeholder="เช่น วัดสัญญาณชีพ ทำแผล ทำกายภาพ"></textarea>
+        </div>
+        <div>
+          <label class="form-label">การให้สุขศึกษา</label>
+          <textarea x-model="form.HealthEducation" rows="2" class="form-input"
+                    placeholder="เช่น แนะนำเรื่องการรับประทานยา ดูแลแผล โภชนาการ"></textarea>
+        </div>
+        <div>
+          <label class="form-label">การมีส่วนร่วมของครอบครัว</label>
+          <textarea x-model="form.FamilyParticipation" rows="2" class="form-input"
+                    placeholder="เช่น ลูกสะใภ้ช่วยทำแผลตามคำแนะนำ"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Issues found -->
+    <div class="card">
+      <div class="section-title">⚠️ ปัญหาที่พบ</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="form-label">🏠 ปัญหาสิ่งแวดล้อม</label>
+          <textarea x-model="form.EnvironmentIssue" rows="2" class="form-input"
+                    placeholder="เช่น บ้านมืด พื้นลื่น"></textarea>
+        </div>
+        <div>
+          <label class="form-label">💊 ปัญหาเรื่องยา</label>
+          <textarea x-model="form.MedicationIssue" rows="2" class="form-input"
+                    placeholder="เช่น ลืมทานยา ทานยาไม่ครบ"></textarea>
+        </div>
+        <div>
+          <label class="form-label">🍽️ ปัญหาโภชนาการ</label>
+          <textarea x-model="form.NutritionIssue" rows="2" class="form-input"
+                    placeholder="เช่น เบื่ออาหาร น้ำหนักลด"></textarea>
+        </div>
+        <div>
+          <label class="form-label">🦽 ปัญหาการฟื้นฟู</label>
+          <textarea x-model="form.RehabilitationIssue" rows="2" class="form-input"
+                    placeholder="เช่น ไม่ออกกำลังกาย กล้ามเนื้อลีบ"></textarea>
+        </div>
+        <div class="sm:col-span-2">
+          <label class="form-label">🧠 ปัญหาด้านจิตสังคม</label>
+          <textarea x-model="form.PsychosocialIssue" rows="2" class="form-input"
+                    placeholder="เช่น เครียด เหงา ไม่มีคนคุยด้วย"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Referral + next -->
+    <div class="card">
+      <div class="section-title">📋 การส่งต่อและการนัดหมาย</div>
+      <div class="space-y-3">
+        <div>
+          <label class="form-label">การส่งต่อ / การประสาน</label>
+          <textarea x-model="form.ReferralAction" rows="2" class="form-input"
+                    placeholder="เช่น ส่งพบจักษุแพทย์ ประสานนักกายภาพมาเยี่ยม"></textarea>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="form-label">📅 นัดเยี่ยมครั้งถัดไป</label>
+            <input type="date" x-model="form.NextVisitDate" class="form-input">
+          </div>
+          <div class="flex items-end">
+            <button type="button" @click="captureLocation()" class="btn btn-outline w-full">
+              📍 บันทึกพิกัด GPS การเยี่ยม
+            </button>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3" x-show="form.Latitude||form.Longitude">
+          <div>
+            <label class="form-label text-xs">Latitude</label>
+            <input type="text" x-model="form.Latitude" class="form-input font-mono text-sm">
+          </div>
+          <div>
+            <label class="form-label text-xs">Longitude</label>
+            <input type="text" x-model="form.Longitude" class="form-input font-mono text-sm">
+          </div>
+        </div>
+        <div>
+          <label class="form-label">📝 สรุปการเยี่ยมโดยรวม</label>
+          <textarea x-model="form.VisitSummary" rows="3" class="form-input"
+                    placeholder="สรุปประเด็นสำคัญและข้อเสนอแนะ"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Photos -->
+    <div class="card">
+      <div class="section-title">📷 รูปภาพการเยี่ยม (jpg / png / webp)</div>
+
+      <!-- PDPA consent -->
+      <label class="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3 cursor-pointer">
+        <input type="checkbox" x-model="pdpaConsent" class="mt-0.5 w-5 h-5 accent-primary-600">
+        <span class="text-xs text-amber-800">
+          <b>ความยินยอม (PDPA):</b> ข้าพเจ้าได้รับความยินยอมจากผู้รับบริการ/ผู้ดูแล
+          ในการถ่ายและจัดเก็บรูปภาพเพื่อใช้ในการดูแลตามสิทธิ์ LTC เท่านั้น
+        </span>
+      </label>
+
+      <input type="file" accept="image/jpeg,image/png,image/webp" multiple
+             x-ref="photoInput" @change="onPhotoPick($event)" class="hidden">
+      <button type="button" @click="$refs.photoInput.click()"
+              :disabled="!pdpaConsent"
+              class="btn btn-outline w-full" :class="!pdpaConsent?'opacity-50':''">
+        📎 เลือกรูปภาพ (แนบได้หลายรูป)
+      </button>
+      <p x-show="!pdpaConsent" class="text-xs text-slate-400 mt-1">โปรดยืนยันความยินยอม PDPA ก่อนแนบรูป</p>
+
+      <!-- Preview -->
+      <div x-show="photos.length" class="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-3">
+        <template x-for="(ph, idx) in photos" :key="idx">
+          <div class="photo-thumb">
+            <img :src="ph.dataUrl" :alt="ph.name">
+            <button type="button" class="remove" @click="photos.splice(idx,1)">&times;</button>
+          </div>
+        </template>
+      </div>
+      <p x-show="photos.length" class="text-xs text-slate-500 mt-2">
+        แนบ <b x-text="photos.length"></b> รูป (อัปโหลดอัตโนมัติหลังบันทึกการเยี่ยม)
+      </p>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="sticky bottom-20 md:bottom-0 bg-gradient-to-t from-slate-50 to-transparent pt-4 pb-2 -mx-4 px-4">
+      <div class="flex gap-3">
+        <button type="button" @click="resetForm()" class="btn btn-secondary flex-1">↺ ล้างฟอร์ม</button>
+        <button type="submit" class="btn btn-primary btn-lg flex-[2]" :disabled="saving">
+          <span x-text="saving ? '⏳ กำลังบันทึก...' : '💾 บันทึกการเยี่ยม'"></span>
+        </button>
+      </div>
+    </div>
+  </form>
+
+  <!-- ── Placeholder ก่อนเลือกผู้ป่วย ── -->
+  <div x-show="!selectedPatient && !loading" class="empty-state">
+    <div class="icon">👆</div>
+    <p>กรุณาเลือกผู้รับบริการเพื่อเริ่มบันทึก</p>
+  </div>
+</div>
+
+<script>
+function visitForm() {
+  return {
+    patients: [],
+    patientSearch: '',
+    filteredPatients: [],
+    showDropdown: false,
+    selectedPatient: null,
+    visitNo: null,
+    saving: false,
+    loading: true,
+    form: this.blankForm(),
+    photos: [],         // {name, mime, dataUrl}
+    pdpaConsent: false,
+
+    blankForm() {
+      const today = new Date().toISOString().split('T')[0];
+      const u = (typeof window !== 'undefined') ? null : null;
+      return {
+        VisitType: 'home_visit',
+        VisitDate: today, StartTime:'', EndTime:'',
+        VisitorID:'', VisitorName:'',
+        MainProblem:'', CareProvided:'', HealthEducation:'', FamilyParticipation:'',
+        EnvironmentIssue:'', MedicationIssue:'', NutritionIssue:'',
+        RehabilitationIssue:'', PsychosocialIssue:'',
+        ReferralAction:'', NextVisitDate:'', VisitSummary:'',
+        Latitude:'', Longitude:''
+      };
+    },
+
+    async init() {
+      // อัตโนมัติเติม visitor จาก user ที่ login
+      this.form.VisitorID = this.$root.user?.userId || '';
+      this.form.VisitorName = this.$root.user?.fullName || this.$root.user?.username || '';
+      await this.loadPatients();
+    },
+
+    async loadPatients() {
+      this.loading = true;
+      try {
+        const r = await rpc('api_getPatients', this.$root.token, {});
+        if (!r.success) { showError(r.message); return; }
+        this.patients = r.data || [];
+        this.filteredPatients = [...this.patients];
+      } catch (e) {
+        showError(e.message || 'โหลดรายชื่อไม่สำเร็จ');
+      } finally { this.loading = false; }
+    },
+
+    filterPatients() {
+      const q = (this.patientSearch||'').trim().toLowerCase();
+      if (!q) { this.filteredPatients = this.patients; return; }
+      this.filteredPatients = this.patients.filter(p =>
+        (p.FullName && p.FullName.toLowerCase().includes(q)) ||
+        (p.HN && String(p.HN).toLowerCase().includes(q)) ||
+        (p.VillageName && p.VillageName.toLowerCase().includes(q)) ||
+        (String(p.VillageNo||'').toLowerCase().includes(q))
+      );
+    },
+
+    async selectPatient(p) {
+      this.selectedPatient = p;
+      this.patientSearch = p.FullName;
+      this.showDropdown = false;
+      // คำนวณ VisitNo อัตโนมัติ
+      try {
+        const r = await rpc('api_calculateVisitNo', this.$root.token, p.PatientID);
+        if (r.success) this.visitNo = r.data.visitNo;
+      } catch (e) { this.visitNo = '?'; }
+    },
+
+    resetPatient() {
+      this.selectedPatient = null;
+      this.patientSearch = '';
+      this.visitNo = null;
+      this.resetForm();
+    },
+
+    resetForm() {
+      const visitorID = this.form.VisitorID;
+      const visitorName = this.form.VisitorName;
+      this.form = this.blankForm();
+      this.form.VisitorID = visitorID;
+      this.form.VisitorName = visitorName;
+      this.photos = [];
+      this.pdpaConsent = false;
+    },
+
+    // ── Photo handling ──
+    onPhotoPick(event) {
+      const files = Array.from(event.target.files || []);
+      const allowed = ['image/jpeg','image/jpg','image/png','image/webp'];
+      files.forEach(file => {
+        if (allowed.indexOf(file.type) < 0) {
+          showError('รองรับเฉพาะ jpg, png, webp: ' + file.name);
+          return;
+        }
+        if (file.size > 8 * 1024 * 1024) {
+          showError('ไฟล์ใหญ่เกิน 8MB: ' + file.name);
+          return;
+        }
+        this._compressImage(file).then(dataUrl => {
+          this.photos.push({ name: file.name, mime: 'image/jpeg', dataUrl });
+        });
+      });
+      event.target.value = '';
+    },
+
+    _compressImage(file, maxW = 1280) {
+      return new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const img = new Image();
+          img.onload = () => {
+            const ratio = Math.min(maxW / img.width, 1);
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(img.width * ratio);
+            canvas.height = Math.round(img.height * ratio);
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/jpeg', 0.82));
+          };
+          img.onerror = () => resolve(e.target.result);
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    },
+
+    async _uploadPhotos(visitId) {
+      if (!this.photos.length) return;
+      let ok = 0;
+      for (const ph of this.photos) {
+        try {
+          const r = await rpc('api_uploadPhoto', this.$root.token,
+            ph.dataUrl, ph.name, this.selectedPatient.PatientID, visitId, '', true);
+          if (r.success) ok++;
+        } catch (e) { /* นับเฉพาะที่สำเร็จ */ }
+      }
+      if (ok < this.photos.length) {
+        showError('อัปโหลดรูปสำเร็จ ' + ok + '/' + this.photos.length + ' รูป');
+      }
+    },
+
+    captureLocation() {
+      if (!navigator.geolocation) { showError('Browser ไม่รองรับ GPS'); return; }
+      Swal.fire({ title:'📍 กำลังขอตำแหน่ง...', didOpen:()=>Swal.showLoading(), allowOutsideClick:false });
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          this.form.Latitude = pos.coords.latitude.toFixed(6);
+          this.form.Longitude = pos.coords.longitude.toFixed(6);
+          Swal.fire({ icon:'success', title:'บันทึกพิกัดแล้ว',
+                      html:`Lat: <b>${this.form.Latitude}</b><br>Lng: <b>${this.form.Longitude}</b>` });
+        },
+        err => Swal.fire({ icon:'error', title:'ไม่สามารถรับ GPS ได้', text: err.message }),
+        { enableHighAccuracy:true, timeout:15000 }
+      );
+    },
+
+    async submit() {
+      if (!this.selectedPatient) { showError('กรุณาเลือกผู้รับบริการ'); return; }
+      if (!this.form.VisitDate)  { showError('กรุณาระบุวันที่เยี่ยม'); return; }
+      if (!this.form.MainProblem) { showError('กรุณาระบุอาการหลัก/ปัญหาที่พบ'); return; }
+      if (this.form.StartTime && this.form.EndTime && this.form.StartTime > this.form.EndTime) {
+        showError('เวลาสิ้นสุดต้องหลังเวลาเริ่ม'); return;
+      }
+
+      const ok = await showConfirm(
+        'บันทึกการเยี่ยมครั้งที่ ' + this.visitNo + '?',
+        this.selectedPatient.FullName + ' · วันที่ ' + this.formatDate(this.form.VisitDate)
+      );
+      if (!ok) return;
+
+      this.saving = true;
+      try {
+        const payload = { ...this.form, PatientID: this.selectedPatient.PatientID };
+        const r = await rpc('api_saveVisit', this.$root.token, payload);
+        if (!r.success) { showError(r.message); return; }
+
+        // ── อัปโหลดรูปที่แนบไว้ (ถ้ามี) ──
+        if (this.photos.length) {
+          Swal.fire({ title:'📤 กำลังอัปโหลดรูป...', didOpen:()=>Swal.showLoading(), allowOutsideClick:false });
+          await this._uploadPhotos(r.data.visitId);
+          Swal.close();
+        }
+
+        Swal.fire({
+          icon:'success',
+          title:'บันทึกสำเร็จ',
+          html:`บันทึกการเยี่ยมครั้งที่ <b>${r.data.visitNo}</b> เรียบร้อย<br><br>` +
+               `<small class="text-slate-500">ต้องการบันทึกแบบประเมินต่อหรือไม่?</small>`,
+          showCancelButton: true,
+          confirmButtonText:'ไปทำแบบประเมิน',
+          cancelButtonText:'เสร็จสิ้น',
+          confirmButtonColor:'#1d4ed8'
+        }).then(res => {
+          if (res.isConfirmed) {
+            this.$root.showPage('assessment');
+          } else {
+            this.resetPatient();
+          }
+        });
+      } catch (e) {
+        showError(e.message || 'บันทึกไม่สำเร็จ');
+      } finally { this.saving = false; }
+    },
+
+    taiBadge(g) {
+      const s = String(g||'');
+      if (s.includes('1')) return 'badge-green';
+      if (s.includes('2')) return 'badge-yellow';
+      if (s.includes('3')) return 'badge-orange';
+      if (s.includes('4')) return 'badge-red';
+      return 'badge-gray';
+    },
+
+    patientAddress(p) {
+      if (!p) return '-';
+      return [p.Address, p.VillageNo?'ม.'+p.VillageNo:'', p.VillageName?'('+p.VillageName+')':'',
+              p.Subdistrict?'ต.'+p.Subdistrict:'', p.District?'อ.'+p.District:'',
+              p.Province?'จ.'+p.Province:''].filter(s=>s).join(' ') || '-';
+    },
+
+    formatDate(d) { return this.$root.formatThaiDate(d); }
+  };
+}
+</script>
+
+        </div>
+
+        <!-- Page: Assessment -->
+        <div x-show="page === 'assessment'">
+          <!-- ============================================================
+     assessment-form.html — LTC Assessment Stepper (5 steps)
+     ============================================================ -->
+<div x-data="assessmentForm()" x-init="init()">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+    <div>
+      <h1 class="text-xl sm:text-2xl font-bold text-slate-800">📋 แบบประเมินสุขภาพ LTC</h1>
+      <p class="text-xs text-slate-500 mt-0.5">5 ขั้นตอน · ทำต่อเนื่องหรือข้ามได้</p>
+    </div>
+  </div>
+
+  <!-- ── Disclaimer ── -->
+  <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 flex gap-2 items-start text-xs text-amber-800">
+    <span class="text-base">⚠️</span>
+    <span>ผลการแปลความหมายทั้งหมดเป็นเพียง <b>การคัดกรองเบื้องต้น</b> ไม่ใช่การวินิจฉัยทางการแพทย์ กรุณาปรึกษาแพทย์เพื่อยืนยันผล</span>
+  </div>
+
+  <!-- ── Patient + Visit selector (sticky) ── -->
+  <div class="card mb-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <label class="form-label">👤 ผู้รับบริการ <span class="text-red-500">*</span></label>
+        <select x-model="selectedPatientId" @change="onPatientChange()" class="form-input">
+          <option value="">-- เลือกผู้รับบริการ --</option>
+          <template x-for="p in patients" :key="p.PatientID">
+            <option :value="p.PatientID" x-text="p.FullName+' ('+(p.HN||'-')+')'"></option>
+          </template>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">🚪 การเยี่ยมที่จะผูก <span class="text-red-500">*</span></label>
+        <select x-model="selectedVisitId" class="form-input" :disabled="!selectedPatientId">
+          <option value="">-- เลือก Visit --</option>
+          <template x-for="v in visits" :key="v.VisitID">
+            <option :value="v.VisitID"
+                    x-text="'ครั้งที่ '+v.VisitNo+' · '+formatDate(v.VisitDate)"></option>
+          </template>
+        </select>
+        <p x-show="selectedPatientId && !visits.length" class="text-xs text-red-600 mt-1">
+          ⚠️ ผู้ป่วยรายนี้ยังไม่มีการเยี่ยม กรุณาบันทึกการเยี่ยมก่อน
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Stepper ── -->
+  <div class="card mb-4 p-3">
+    <div class="flex items-center justify-between overflow-x-auto pb-1">
+      <template x-for="(s, idx) in steps" :key="s.id">
+        <div class="flex items-center flex-shrink-0">
+          <button @click="goTo(idx)" :disabled="!canGoStep(idx)"
+                  class="flex items-center gap-2 px-2 py-1 rounded-lg transition"
+                  :class="step===idx ? 'bg-primary-100 text-primary-800' : (idx<step ? 'text-accent-700' : 'text-slate-400')">
+            <span class="w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0"
+                  :class="step===idx ? 'bg-primary-600 text-white' : (idx<step ? 'bg-accent-500 text-white' : 'bg-slate-200')"
+                  x-text="idx<step?'✓':(idx+1)"></span>
+            <span class="text-xs sm:text-sm font-semibold whitespace-nowrap" x-text="s.label"></span>
+          </button>
+          <span x-show="idx < steps.length-1" class="mx-1 text-slate-300">—</span>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- ──────────────────────────────────────────────── -->
+  <!-- ── STEP 1: VITAL SIGNS ───────────────────────── -->
+  <!-- ──────────────────────────────────────────────── -->
+  <div x-show="step===0" class="card">
+    <div class="section-title">💓 Step 1: สัญญาณชีพ</div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
+      <div>
+        <label class="form-label">น้ำหนัก (กก.)</label>
+        <input type="number" step="0.1" x-model="vital.Weight" @input="updateBMI()" class="form-input">
+      </div>
+      <div>
+        <label class="form-label">ส่วนสูง (ซม.)</label>
+        <input type="number" step="0.1" x-model="vital.Height" @input="updateBMI()" class="form-input">
+      </div>
+      <div>
+        <label class="form-label">BMI (อัตโนมัติ)</label>
+        <div class="form-input bg-slate-50 font-bold" :class="bmiColor"
+             x-text="(vital.BMI||'-')+' '+bmiInterp"></div>
+      </div>
+
+      <div>
+        <label class="form-label">อุณหภูมิ (°C)</label>
+        <input type="number" step="0.1" x-model="vital.Temperature" class="form-input">
+      </div>
+      <div>
+        <label class="form-label">ชีพจร (ครั้ง/นาที)</label>
+        <input type="number" x-model="vital.Pulse" class="form-input">
+      </div>
+      <div>
+        <label class="form-label">การหายใจ</label>
+        <input type="number" x-model="vital.RespiratoryRate" class="form-input">
+      </div>
+    </div>
+
+    <div class="bg-slate-50 rounded-xl p-3 mb-3">
+      <div class="text-xs font-semibold text-slate-600 mb-2">🩸 ความดันโลหิต (BP)</div>
+      <div class="grid grid-cols-3 gap-2 items-end">
+        <div>
+          <label class="form-label text-xs">SBP (บน)</label>
+          <input type="number" x-model="vital.SBP" @input="updateBP()" class="form-input">
+        </div>
+        <div>
+          <label class="form-label text-xs">DBP (ล่าง)</label>
+          <input type="number" x-model="vital.DBP" @input="updateBP()" class="form-input">
+        </div>
+        <div>
+          <div class="text-xs text-slate-500">แปลผล</div>
+          <div class="text-sm font-bold py-2" :class="bpColor" x-text="bpInterp||'-'"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
+      <div>
+        <label class="form-label">DTX (mg/dL)</label>
+        <input type="number" x-model="vital.DTX" @input="updateDTX()" class="form-input">
+        <div class="text-xs font-semibold mt-1" :class="dtxColor" x-text="dtxInterp"></div>
+      </div>
+      <div>
+        <label class="form-label">Pain Score (0-10)</label>
+        <input type="number" min="0" max="10" x-model="vital.PainScore" class="form-input">
+      </div>
+      <div>
+        <label class="form-label">O2 Sat (%)</label>
+        <input type="number" min="0" max="100" x-model="vital.OxygenSat" class="form-input">
+      </div>
+    </div>
+
+    <div class="flex justify-between gap-2 pt-3 border-t">
+      <button @click="next()" class="btn btn-secondary">ข้าม →</button>
+      <button @click="saveVital()" class="btn btn-primary btn-lg flex-1" :disabled="!canSave || saving">
+        <span x-text="saving?'⏳ บันทึก...':'💾 บันทึก Vital Signs'"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ──────────────────────────────────────────────── -->
+  <!-- ── STEP 2: ADL ──────────────────────────────── -->
+  <!-- ──────────────────────────────────────────────── -->
+  <div x-show="step===1" class="card">
+    <div class="section-title">🧩 Step 2: ADL (Activities of Daily Living)</div>
+    <p class="text-xs text-slate-500 mb-3">ประเมิน 10 รายการ คะแนนรวม 0-20</p>
+
+    <div class="space-y-2 mb-4">
+      <template x-for="item in adlItems" :key="item.key">
+        <div class="bg-slate-50 rounded-xl p-3">
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-semibold text-sm" x-text="item.label"></span>
+            <span class="text-xs text-slate-500" x-text="'0-'+item.max"></span>
+          </div>
+          <div class="flex gap-1.5 flex-wrap">
+            <template x-for="n in (item.max+1)">
+              <button type="button" @click="adl[item.key] = n-1; calcADLTotal()"
+                      :class="adl[item.key]==(n-1) ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-slate-600 border-slate-200'"
+                      class="w-12 h-10 rounded-lg border-2 font-bold text-sm transition"
+                      x-text="n-1"></button>
+            </template>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- ADL Summary -->
+    <div class="bg-gradient-to-r from-primary-50 to-accent-50 rounded-2xl p-4 mb-3">
+      <div class="text-center">
+        <div class="text-xs text-slate-600">คะแนนรวม ADL</div>
+        <div class="text-4xl font-bold text-primary-700" x-text="adlTotal+' / 20'"></div>
+        <div class="text-sm font-semibold mt-1" :class="adlColor" x-text="adlLevel"></div>
+        <div class="mt-2 text-sm font-bold" :class="taiColor" x-text="taiGroup"></div>
+        <div x-show="adlTotal<=11" class="mt-2 inline-flex items-center gap-1 bg-orange-100 text-orange-800 text-xs font-semibold px-3 py-1 rounded-full">
+          ⚠️ ADL ≤ 11 → จัดเป็น "ผู้พึ่งพิง"
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-between gap-2 pt-3 border-t">
+      <button @click="prev()" class="btn btn-secondary">← กลับ</button>
+      <button @click="next()" class="btn btn-secondary">ข้าม →</button>
+      <button @click="saveADL()" class="btn btn-primary btn-lg flex-1" :disabled="!canSave || saving">
+        <span x-text="saving?'⏳':'💾 บันทึก ADL'"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ──────────────────────────────────────────────── -->
+  <!-- ── STEP 3: PPS ──────────────────────────────── -->
+  <!-- ──────────────────────────────────────────────── -->
+  <div x-show="step===2" class="card">
+    <div class="section-title">🛏️ Step 3: PPS (Palliative Performance Scale)</div>
+    <p class="text-xs text-slate-500 mb-3">สำหรับผู้ป่วยระยะสุดท้าย/มีโรคเรื้อรัง คะแนน 0-100% (ลำดับ 10)</p>
+
+    <div class="mb-3">
+      <label class="form-label">🎯 PPS Score <span class="text-red-500">*</span></label>
+      <div class="grid grid-cols-6 sm:grid-cols-11 gap-1.5">
+        <template x-for="n in 11">
+          <button type="button" @click="pps.PPSScore = (11-n)*10; updatePPS()"
+                  :class="pps.PPSScore===(11-n)*10 ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-slate-600 border-slate-200'"
+                  class="h-12 rounded-lg border-2 font-bold text-sm transition"
+                  x-text="(11-n)*10+'%'"></button>
+        </template>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+      <div>
+        <label class="form-label">การเดิน (Ambulation)</label>
+        <select x-model="pps.Ambulation" class="form-input">
+          <option value="">-- เลือก --</option>
+          <option>เต็มที่</option><option>ลดลง</option>
+          <option>นั่ง/นอนเป็นส่วนใหญ่</option><option>นอนเป็นส่วนใหญ่</option>
+          <option>นอนตลอด</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">กิจกรรม + โรค</label>
+        <select x-model="pps.ActivityDisease" class="form-input">
+          <option value="">-- เลือก --</option>
+          <option>ปกติ ไม่มีโรค</option>
+          <option>ปกติ มีโรคบางอย่าง</option>
+          <option>จำกัด เนื่องจากโรค</option>
+          <option>ทำงานไม่ได้ โรคลุกลาม</option>
+          <option>ทำกิจกรรมไม่ได้</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">การดูแลตนเอง (Self-Care)</label>
+        <select x-model="pps.SelfCare" class="form-input">
+          <option value="">-- เลือก --</option>
+          <option>เต็มที่</option><option>ต้องช่วยเป็นครั้งคราว</option>
+          <option>ต้องช่วยมาก</option><option>ต้องดูแลส่วนใหญ่</option>
+          <option>ต้องดูแลทั้งหมด</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">การรับประทาน (Intake)</label>
+        <select x-model="pps.Intake" class="form-input">
+          <option value="">-- เลือก --</option>
+          <option>ปกติ</option><option>ลดลง</option>
+          <option>ทานน้อยมาก</option><option>เฉพาะดูแลปาก</option>
+        </select>
+      </div>
+      <div class="sm:col-span-2">
+        <label class="form-label">ระดับความรู้สึกตัว (Conscious Level)</label>
+        <select x-model="pps.ConsciousLevel" class="form-input">
+          <option value="">-- เลือก --</option>
+          <option>รู้ตัวดี</option><option>รู้ตัวหรือสับสน</option>
+          <option>รู้ตัวหรือซึม</option><option>ซึมหรือโคม่า</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- PPS Summary -->
+    <div x-show="pps.PPSScore!==''" class="rounded-2xl p-4 mb-3"
+         :class="ppsCategory==='palliative' ? 'bg-red-50' : ppsCategory==='supportive' ? 'bg-yellow-50' : 'bg-green-50'">
+      <div class="text-center">
+        <div class="text-xs text-slate-600">PPS Score</div>
+        <div class="text-4xl font-bold" :class="ppsColor" x-text="pps.PPSScore+'%'"></div>
+        <div class="text-sm font-semibold mt-1" x-text="ppsLevel"></div>
+        <div x-show="ppsCategory==='palliative'" class="mt-2 inline-flex items-center gap-1 bg-red-200 text-red-900 text-xs font-bold px-3 py-1 rounded-full">
+          🕊️ Palliative Care — ผู้ป่วยระยะท้าย พิจารณา Advance Care Planning
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-between gap-2 pt-3 border-t">
+      <button @click="prev()" class="btn btn-secondary">← กลับ</button>
+      <button @click="next()" class="btn btn-secondary">ข้าม →</button>
+      <button @click="savePPS()" class="btn btn-primary btn-lg flex-1" :disabled="!canSave || saving">
+        <span x-text="saving?'⏳':'💾 บันทึก PPS'"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ──────────────────────────────────────────────── -->
+  <!-- ── STEP 4: MENTAL HEALTH 2Q/9Q ─────────────── -->
+  <!-- ──────────────────────────────────────────────── -->
+  <div x-show="step===3" class="card">
+    <div class="section-title">🧠 Step 4: คัดกรองสุขภาพจิต (2Q / 9Q)</div>
+
+    <!-- 2Q -->
+    <div class="bg-slate-50 rounded-xl p-4 mb-4">
+      <h4 class="font-bold text-slate-700 mb-3">📋 แบบคัดกรอง 2Q (ใน 2 สัปดาห์ที่ผ่านมา)</h4>
+      <template x-for="(q, idx) in mentalConfig.q2Questions" :key="idx">
+        <div class="mb-3 last:mb-0">
+          <div class="text-sm mb-2" x-text="(idx+1)+'. '+q"></div>
+          <div class="flex gap-2">
+            <button type="button" @click="mental['Q'+(idx+1)]='yes'; update2Q()"
+                    :class="mental['Q'+(idx+1)]==='yes' ? 'bg-red-500 text-white border-red-500' : 'bg-white text-slate-600 border-slate-300'"
+                    class="flex-1 py-3 rounded-xl border-2 font-semibold transition">✓ ใช่</button>
+            <button type="button" @click="mental['Q'+(idx+1)]='no'; update2Q()"
+                    :class="mental['Q'+(idx+1)]==='no' ? 'bg-accent-500 text-white border-accent-500' : 'bg-white text-slate-600 border-slate-300'"
+                    class="flex-1 py-3 rounded-xl border-2 font-semibold transition">✗ ไม่ใช่</button>
+          </div>
+        </div>
+      </template>
+      <div x-show="q2Total !== null" class="mt-3 text-center p-3 rounded-xl"
+           :class="q2AtRisk ? 'bg-orange-100' : 'bg-green-100'">
+        <div class="text-xs text-slate-600">คะแนน 2Q</div>
+        <div class="text-2xl font-bold" :class="q2AtRisk?'text-orange-700':'text-green-700'"
+             x-text="q2Total+' / 2'"></div>
+        <div class="text-sm font-semibold" :class="q2AtRisk?'text-orange-700':'text-green-700'"
+             x-text="q2AtRisk ? '⚠️ เสี่ยง — กรุณาทำ 9Q เพิ่มเติม' : '✓ ไม่เสี่ยง'"></div>
+      </div>
+    </div>
+
+    <!-- 9Q (show if 2Q risky) -->
+    <div x-show="show9Q" x-cloak class="bg-orange-50 border-2 border-orange-200 rounded-xl p-4 mb-4">
+      <h4 class="font-bold text-orange-800 mb-2">⚠️ แบบประเมินซึมเศร้า 9Q (ตอบทุกข้อ)</h4>
+      <p class="text-xs text-slate-600 mb-3">0=ไม่มี · 1=มีบางวัน · 2=บ่อยกว่า · 3=ทุกวัน</p>
+
+      <template x-for="(q, idx) in mentalConfig.q9Questions" :key="idx">
+        <div class="mb-3 last:mb-0">
+          <div class="text-sm mb-2">
+            <span x-text="(idx+1)+'. '+q"></span>
+          </div>
+          <div class="flex gap-1.5">
+            <template x-for="n in 4">
+              <button type="button" @click="m9['Q'+(idx+1)] = n-1; update9Q()"
+                      :class="m9['Q'+(idx+1)]==(n-1) ? (idx===8 && n>1 ? 'bg-red-600 text-white border-red-600' : 'bg-primary-600 text-white border-primary-600') : 'bg-white border-slate-300'"
+                      class="flex-1 h-11 rounded-lg border-2 font-bold text-sm transition"
+                      x-text="n-1"></button>
+            </template>
+          </div>
+        </div>
+      </template>
+
+      <!-- ⚠️ Suicidal red alert -->
+      <div x-show="suicidalAlert" x-cloak class="mt-4 bg-red-600 text-white rounded-xl p-4 animate-pulse">
+        <div class="flex items-center gap-2 font-bold text-lg">🚨 ความเสี่ยงสูง!</div>
+        <p class="text-sm mt-2">ตรวจพบความคิดทำร้ายตนเอง (Q9 > 0)</p>
+        <ul class="text-xs mt-2 space-y-1 list-disc list-inside">
+          <li>📞 ติดต่อสายด่วนสุขภาพจิต <b>1323</b> ทันที</li>
+          <li>🚑 หรือฉุกเฉินทางการแพทย์ <b>1669</b></li>
+          <li>👨‍⚕️ ส่งต่อจิตแพทย์โดยด่วน</li>
+          <li>👨‍👩‍👧 แจ้งครอบครัว/ผู้ดูแลให้เฝ้าระวังตลอด 24 ชม.</li>
+        </ul>
+      </div>
+
+      <div x-show="q9Total !== null && !suicidalAlert" class="mt-3 text-center p-3 rounded-xl bg-white">
+        <div class="text-xs text-slate-600">คะแนน 9Q</div>
+        <div class="text-2xl font-bold text-orange-700" x-text="q9Total+' / 27'"></div>
+        <div class="text-sm font-semibold text-slate-700" x-text="q9Interp"></div>
+      </div>
+    </div>
+
+    <div class="flex justify-between gap-2 pt-3 border-t">
+      <button @click="prev()" class="btn btn-secondary">← กลับ</button>
+      <button @click="next()" class="btn btn-secondary">ข้าม →</button>
+      <button @click="saveMental()" class="btn btn-primary btn-lg flex-1" :disabled="!canSave || saving || q2Total===null">
+        <span x-text="saving?'⏳':(show9Q?'💾 บันทึก 9Q':'💾 บันทึก 2Q')"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ──────────────────────────────────────────────── -->
+  <!-- ── STEP 5: BENEFIT PACKAGE REPORT ────────────── -->
+  <!-- ──────────────────────────────────────────────── -->
+  <div x-show="step===4" class="card">
+    <div class="section-title">✅ Step 5: รายงานบริการ Benefit Package</div>
+
+    <div class="grid grid-cols-2 gap-3 mb-4">
+      <div>
+        <label class="form-label">ปีงบประมาณ (ค.ศ.)</label>
+        <input type="number" x-model="benefit.FiscalYear" class="form-input" min="2020" max="2050">
+      </div>
+      <div>
+        <label class="form-label">เดือนที่รายงาน</label>
+        <select x-model="benefit.ReportMonth" class="form-input">
+          <template x-for="m in 12"><option :value="m" x-text="thaiMonth(m)"></option></template>
+        </select>
+      </div>
+    </div>
+
+    <p class="text-xs text-slate-500 mb-2">เลือกบริการที่ให้ในเดือนนี้ (เลือกอย่างน้อย 1 รายการ)</p>
+
+    <template x-for="g in benefitGroups" :key="g">
+      <div class="mb-4">
+        <div class="font-bold text-sm text-primary-700 mb-2" x-text="'📦 '+g"></div>
+        <div class="space-y-2">
+          <template x-for="item in benefitItems.filter(x => x.group === g)" :key="item.id">
+            <div class="bg-slate-50 rounded-xl p-3">
+              <label class="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" :checked="isBenefitSelected(item.id)"
+                       @change="toggleBenefit(item)" class="mt-1 w-5 h-5 accent-primary-600">
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-semibold" x-text="item.name"></div>
+                  <div class="text-[10px] text-slate-400 font-mono" x-text="item.id+' · หน่วย: '+item.unit"></div>
+                </div>
+              </label>
+              <div x-show="isBenefitSelected(item.id)" class="mt-3 pl-8 grid grid-cols-2 gap-2">
+                <div>
+                  <label class="form-label text-xs">จำนวน</label>
+                  <input type="number" min="1"
+                         :value="getBenefitItem(item.id)?.quantity || 1"
+                         @input="updateBenefitItem(item.id, 'quantity', $event.target.value)"
+                         class="form-input">
+                </div>
+                <div>
+                  <label class="form-label text-xs">ผู้ให้บริการ</label>
+                  <input type="text"
+                         :value="getBenefitItem(item.id)?.provider || $root.user?.fullName || ''"
+                         @input="updateBenefitItem(item.id, 'provider', $event.target.value)"
+                         class="form-input" placeholder="ชื่อผู้ให้บริการ">
+                </div>
+                <div class="col-span-2">
+                  <label class="form-label text-xs">หมายเหตุ</label>
+                  <input type="text"
+                         :value="getBenefitItem(item.id)?.notes || ''"
+                         @input="updateBenefitItem(item.id, 'notes', $event.target.value)"
+                         class="form-input" placeholder="รายละเอียดเพิ่มเติม">
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
+
+    <div>
+      <label class="form-label">📝 หมายเหตุภาพรวม</label>
+      <textarea x-model="benefit.Notes" rows="2" class="form-input"
+                placeholder="หมายเหตุประจำเดือน"></textarea>
+    </div>
+
+    <div class="bg-primary-50 rounded-xl p-3 mt-3 text-center">
+      <div class="text-xs text-slate-600">เลือกแล้ว</div>
+      <div class="text-2xl font-bold text-primary-700"
+           x-text="benefit.ServiceItems.length+' รายการ'"></div>
+    </div>
+
+    <div class="flex justify-between gap-2 pt-3 mt-3 border-t">
+      <button @click="prev()" class="btn btn-secondary">← กลับ</button>
+      <button @click="saveBenefit()" class="btn btn-success btn-lg flex-1" :disabled="!canSave || saving || !benefit.ServiceItems.length">
+        <span x-text="saving?'⏳':'✅ บันทึกรายงานบริการ'"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+function assessmentForm() {
+  return {
+    // ── Steps ──
+    step: 0,
+    steps: [
+      { id:'vital',   label:'Vital Signs' },
+      { id:'adl',     label:'ADL' },
+      { id:'pps',     label:'PPS' },
+      { id:'mental',  label:'Mental 2Q/9Q' },
+      { id:'benefit', label:'Benefit' }
+    ],
+    saving: false,
+
+    // ── Patient & Visit ──
+    patients: [],
+    visits: [],
+    selectedPatientId: '',
+    selectedVisitId: '',
+
+    // ── Vital Signs ──
+    vital: { Weight:'', Height:'', BMI:'', Temperature:'', Pulse:'',
+             RespiratoryRate:'', SBP:'', DBP:'', DTX:'', PainScore:'', OxygenSat:'' },
+    bmiInterp:'', bmiColor:'',
+    bpInterp:'', bpColor:'',
+    dtxInterp:'', dtxColor:'',
+
+    // ── ADL ──
+    adlItems: [
+      { key:'Feeding',   label:'1. รับประทานอาหาร', max:2 },
+      { key:'Grooming',  label:'2. ล้างหน้า แปรงฟัน', max:1 },
+      { key:'Transfer',  label:'3. ลุก/ย้ายตัว', max:3 },
+      { key:'ToiletUse', label:'4. ใช้ห้องน้ำ', max:2 },
+      { key:'Mobility',  label:'5. การเคลื่อนที่', max:3 },
+      { key:'Dressing',  label:'6. สวมใส่เสื้อผ้า', max:2 },
+      { key:'Stairs',    label:'7. ขึ้น-ลงบันได', max:2 },
+      { key:'Bathing',   label:'8. อาบน้ำ', max:1 },
+      { key:'Bowels',    label:'9. กลั้นอุจจาระ', max:2 },
+      { key:'Bladder',   label:'10. กลั้นปัสสาวะ', max:2 }
+    ],
+    adl: {},
+    adlTotal: 0,
+    adlLevel: '', adlColor: '',
+    taiGroup: '', taiColor: '',
+
+    // ── PPS ──
+    pps: { PPSScore:'', Ambulation:'', ActivityDisease:'', SelfCare:'', Intake:'', ConsciousLevel:'' },
+    ppsLevel: '', ppsCategory: '', ppsColor: '',
+
+    // ── Mental Health ──
+    mentalConfig: {
+      q2Questions: [
+        'รู้สึก หดหู่ เศร้า หรือท้อแท้สิ้นหวัง หรือไม่?',
+        'รู้สึก เบื่อ ทำอะไรก็ไม่เพลิดเพลิน หรือไม่?'
+      ],
+      q9Questions: [
+        'เบื่อ ไม่สนใจอยากทำอะไร',
+        'ไม่สบายใจ ซึมเศร้า ท้อแท้',
+        'หลับยาก/หลับๆ ตื่นๆ หรือหลับมากเกินไป',
+        'เหนื่อยง่าย หรือไม่ค่อยมีแรง',
+        'เบื่ออาหาร หรือกินมากเกินไป',
+        'รู้สึกไม่ดีกับตัวเอง คิดว่าตัวเองล้มเหลว',
+        'สมาธิไม่ดีเวลาทำสิ่งต่างๆ',
+        'พูดช้า/ทำอะไรช้า หรือกระสับกระส่ายมากกว่าปกติ',
+        '⚠️ คิดทำร้ายตนเอง หรือคิดว่าตายไปจะดีกว่า'
+      ]
+    },
+    mental: { Q1:'', Q2:'' },
+    m9: { Q1:'', Q2:'', Q3:'', Q4:'', Q5:'', Q6:'', Q7:'', Q8:'', Q9:'' },
+    q2Total: null, q2AtRisk: false, show9Q: false,
+    q9Total: null, q9Interp: '', suicidalAlert: false,
+
+    // ── Benefit ──
+    benefitItems: [],
+    benefitGroups: [],
+    benefit: {
+      FiscalYear: new Date().getFullYear(),
+      ReportMonth: new Date().getMonth() + 1,
+      ServiceItems: [],
+      Notes: ''
+    },
+
+    // ============================================================
+    async init() {
+      // โหลดผู้ป่วย
+      try {
+        const r = await rpc('api_getPatients', this.$root.token, {});
+        if (r.success) this.patients = r.data || [];
+      } catch (e) { showError(e.message); }
+
+      // โหลด benefit items
+      try {
+        const r = await rpc('api_getBenefitItems', this.$root.token);
+        if (r.success) { this.benefitItems = r.data.items; this.benefitGroups = r.data.groups; }
+      } catch (e) {}
+
+      // เริ่มต้น ADL ทุก field = 0
+      this.adlItems.forEach(i => this.adl[i.key] = 0);
+      this.calcADLTotal();
+    },
+
+    get canSave() {
+      return this.selectedPatientId && this.selectedVisitId;
+    },
+
+    canGoStep(idx) {
+      // อนุญาตให้คลิกย้อนได้เสมอ + คลิกไปข้างหน้าได้ถ้าเลือกผู้ป่วย+visit
+      return idx <= this.step || this.canSave;
+    },
+
+    goTo(idx) { if (this.canGoStep(idx)) this.step = idx; },
+    next() { if (this.step < this.steps.length-1) this.step++; window.scrollTo(0, 0); },
+    prev() { if (this.step > 0) this.step--; window.scrollTo(0, 0); },
+
+    async onPatientChange() {
+      this.selectedVisitId = '';
+      this.visits = [];
+      if (!this.selectedPatientId) return;
+      try {
+        const r = await rpc('api_getVisitsByPatient', this.$root.token, this.selectedPatientId);
+        if (r.success) {
+          this.visits = r.data || [];
+          // เลือก visit ล่าสุดอัตโนมัติ
+          if (this.visits.length) this.selectedVisitId = this.visits[0].VisitID;
+        }
+      } catch (e) { showError(e.message); }
+    },
+
+    // ── Vital interpretations ──
+    async updateBMI() {
+      const w = parseFloat(this.vital.Weight), h = parseFloat(this.vital.Height);
+      if (!w || !h) { this.vital.BMI = ''; this.bmiInterp = ''; return; }
+      this.vital.BMI = Math.round((w / Math.pow(h/100, 2)) * 10) / 10;
+      try {
+        const r = await rpc('api_interpretBMI', this.vital.BMI);
+        if (r.success) {
+          this.bmiInterp = r.data.level;
+          this.bmiColor = this.colorClass(r.data.color);
+        }
+      } catch (e) {}
+    },
+    async updateBP() {
+      if (!this.vital.SBP || !this.vital.DBP) { this.bpInterp=''; return; }
+      try {
+        const r = await rpc('api_interpretBP', this.vital.SBP, this.vital.DBP);
+        if (r.success) { this.bpInterp = r.data.level; this.bpColor = this.colorClass(r.data.color); }
+      } catch (e) {}
+    },
+    async updateDTX() {
+      if (!this.vital.DTX) { this.dtxInterp=''; return; }
+      try {
+        const r = await rpc('api_interpretDTX', this.vital.DTX);
+        if (r.success) { this.dtxInterp = r.data.level; this.dtxColor = this.colorClass(r.data.color); }
+      } catch (e) {}
+    },
+
+    // ── ADL calculation ──
+    async calcADLTotal() {
+      let total = 0;
+      this.adlItems.forEach(i => total += (parseInt(this.adl[i.key])||0));
+      this.adlTotal = total;
+      try {
+        const [interp, tai] = await Promise.all([
+          rpc('api_interpretADL', total),
+          rpc('api_classifyTAI', total, false)
+        ]);
+        if (interp.success) { this.adlLevel = interp.data.level; this.adlColor = this.colorClass(interp.data.color); }
+        if (tai.success)    { this.taiGroup = tai.data.label;
+                              this.taiColor = total>=12?'text-green-700':total>=5?'text-yellow-700':'text-red-700'; }
+      } catch (e) {}
+    },
+
+    // ── PPS ──
+    async updatePPS() {
+      if (this.pps.PPSScore === '') return;
+      try {
+        const r = await rpc('api_interpretPPS', this.pps.PPSScore);
+        if (r.success) {
+          this.ppsLevel = r.data.level;
+          this.ppsCategory = r.data.category;
+          this.ppsColor = this.colorClass(r.data.color);
+        }
+      } catch (e) {}
+    },
+
+    // ── Mental health ──
+    update2Q() {
+      const y = (this.mental.Q1==='yes'?1:0) + (this.mental.Q2==='yes'?1:0);
+      this.q2Total = y;
+      this.q2AtRisk = y >= 1;
+      this.show9Q = this.q2AtRisk;
+    },
+    update9Q() {
+      let total = 0;
+      for (let i=1; i<=9; i++) total += parseInt(this.m9['Q'+i])||0;
+      this.q9Total = total;
+      const q9 = parseInt(this.m9.Q9)||0;
+      this.suicidalAlert = q9 > 0;
+      if (total < 7) this.q9Interp = 'ไม่มีอาการซึมเศร้า';
+      else if (total <= 12) this.q9Interp = 'ซึมเศร้าระดับน้อย';
+      else if (total <= 18) this.q9Interp = 'ซึมเศร้าระดับปานกลาง';
+      else this.q9Interp = 'ซึมเศร้าระดับรุนแรง';
+    },
+
+    // ── Benefit ──
+    isBenefitSelected(id) { return this.benefit.ServiceItems.some(x => x.id === id); },
+    getBenefitItem(id)    { return this.benefit.ServiceItems.find(x => x.id === id); },
+    toggleBenefit(item) {
+      const idx = this.benefit.ServiceItems.findIndex(x => x.id === item.id);
+      if (idx >= 0) this.benefit.ServiceItems.splice(idx, 1);
+      else this.benefit.ServiceItems.push({
+        id: item.id, name: item.name, group: item.group, unit: item.unit,
+        quantity: 1, provider: this.$root.user?.fullName||'', notes: ''
+      });
+    },
+    updateBenefitItem(id, field, value) {
+      const item = this.getBenefitItem(id);
+      if (item) item[field] = value;
+    },
+
+    // ── Save functions ──
+    async _confirmSave_(title) {
+      return showConfirm(title, this.patientLabel() + ' · Visit ' + this.visitLabel());
+    },
+
+    async saveVital() {
+      if (!this.canSave) { showError('กรุณาเลือกผู้ป่วยและ Visit'); return; }
+      if (!await this._confirmSave_('บันทึกสัญญาณชีพ?')) return;
+      this.saving = true;
+      try {
+        const r = await rpc('api_saveVitalSigns', this.$root.token, { ...this.vital, VisitID: this.selectedVisitId });
+        if (!r.success) { showError(r.message); return; }
+        showSuccess(r.message || 'บันทึกสำเร็จ');
+        this.next();
+      } catch (e) { showError(e.message); }
+      finally { this.saving = false; }
+    },
+
+    async saveADL() {
+      if (!this.canSave) { showError('กรุณาเลือกผู้ป่วยและ Visit'); return; }
+      if (!await this._confirmSave_('บันทึก ADL = ' + this.adlTotal + ' / 20?')) return;
+      this.saving = true;
+      try {
+        const r = await rpc('api_saveADL', this.$root.token,
+          { ...this.adl, VisitID: this.selectedVisitId, HasCognitiveImpairment: false });
+        if (!r.success) { showError(r.message); return; }
+        showSuccess(r.message);
+        this.next();
+      } catch (e) { showError(e.message); }
+      finally { this.saving = false; }
+    },
+
+    async savePPS() {
+      if (!this.canSave) { showError('กรุณาเลือกผู้ป่วยและ Visit'); return; }
+      if (this.pps.PPSScore === '') { showError('กรุณาเลือก PPS Score'); return; }
+      if (!await this._confirmSave_('บันทึก PPS = ' + this.pps.PPSScore + '%?')) return;
+      this.saving = true;
+      try {
+        const r = await rpc('api_savePPS', this.$root.token, { ...this.pps, VisitID: this.selectedVisitId });
+        if (!r.success) { showError(r.message); return; }
+        showSuccess(r.message);
+        this.next();
+      } catch (e) { showError(e.message); }
+      finally { this.saving = false; }
+    },
+
+    async saveMental() {
+      if (!this.canSave) { showError('กรุณาเลือกผู้ป่วยและ Visit'); return; }
+      if (this.q2Total === null) { showError('กรุณาตอบ 2Q ก่อน'); return; }
+      const type = this.show9Q ? '9Q' : '2Q';
+      const payload = { VisitID: this.selectedVisitId, ScreeningType: type };
+      if (type === '2Q') { payload.Q1 = this.mental.Q1; payload.Q2 = this.mental.Q2; }
+      else {
+        // ตรวจ 9Q ครบ
+        for (let i=1; i<=9; i++) {
+          if (this.m9['Q'+i]==='') { showError('กรุณาตอบ 9Q ข้อที่ '+i); return; }
+          payload['Q'+i] = parseInt(this.m9['Q'+i]);
+        }
+      }
+      if (!await this._confirmSave_('บันทึก '+type+' = '+(type==='2Q'?this.q2Total:this.q9Total)+' คะแนน?')) return;
+      this.saving = true;
+      try {
+        const r = await rpc('api_saveMentalHealth', this.$root.token, payload);
+        if (!r.success) { showError(r.message); return; }
+        if (r.data?.highRisk) {
+          Swal.fire({ icon:'warning', title:'⚠️ ตรวจพบความเสี่ยงสูง',
+                      html: (r.data.warnings||[]).join('<br>'),
+                      confirmButtonColor:'#dc2626' });
+        } else {
+          showSuccess(r.message);
+        }
+        this.next();
+      } catch (e) { showError(e.message); }
+      finally { this.saving = false; }
+    },
+
+    async saveBenefit() {
+      if (!this.canSave) { showError('กรุณาเลือกผู้ป่วยและ Visit'); return; }
+      if (!this.benefit.ServiceItems.length) { showError('กรุณาเลือกบริการอย่างน้อย 1 รายการ'); return; }
+      if (!await this._confirmSave_('บันทึกรายงานบริการ '+this.benefit.ServiceItems.length+' รายการ?')) return;
+      this.saving = true;
+      try {
+        const r = await rpc('api_saveBenefitReport', this.$root.token, {
+          PatientID: this.selectedPatientId,
+          FiscalYear: this.benefit.FiscalYear,
+          ReportMonth: this.benefit.ReportMonth,
+          ServiceItems: this.benefit.ServiceItems,
+          Notes: this.benefit.Notes
+        });
+        if (!r.success) { showError(r.message); return; }
+        Swal.fire({ icon:'success', title:'🎉 ทำแบบประเมินครบแล้ว!',
+                    text:r.message, confirmButtonText:'กลับหน้าหลัก' })
+            .then(()=> this.$root.showPage('dashboard'));
+      } catch (e) { showError(e.message); }
+      finally { this.saving = false; }
+    },
+
+    // ── Helpers ──
+    patientLabel() {
+      const p = this.patients.find(x => x.PatientID === this.selectedPatientId);
+      return p ? p.FullName : '-';
+    },
+    visitLabel() {
+      const v = this.visits.find(x => x.VisitID === this.selectedVisitId);
+      return v ? ('ครั้งที่ ' + v.VisitNo + ' · ' + this.formatDate(v.VisitDate)) : '-';
+    },
+    formatDate(d) { return this.$root.formatThaiDate(d); },
+    thaiMonth(m) {
+      return ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.',
+              'ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][m];
+    },
+    colorClass(c) {
+      return ({ green:'text-green-700', blue:'text-blue-700', yellow:'text-yellow-700',
+                orange:'text-orange-700', red:'text-red-700' })[c] || 'text-slate-700';
+    }
+  };
+}
+</script>
+
+        </div>
+
+        <!-- Page: Map -->
+        <div x-show="page === 'map'">
+          <!-- ============================================================
+     map.html — Geographic Case Map (Leaflet)
+     ============================================================ -->
+<div x-data="mapView()" x-init="init()">
+
+  <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+    <div>
+      <h1 class="text-xl sm:text-2xl font-bold text-slate-800">🗺️ แผนที่เคส</h1>
+      <p class="text-xs text-slate-500 mt-0.5">แสดงตำแหน่งบ้านผู้รับบริการตามสถานะการดูแล</p>
+    </div>
+    <button @click="loadCases()" class="btn btn-secondary btn-sm" :disabled="loading">🔄 รีเฟรช</button>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar mb-3">
+    <div>
+      <label class="form-label">🏘️ หมู่บ้าน</label>
+      <select x-model="filter.village" @change="loadCases()" class="form-input">
+        <option value="">ทุกหมู่บ้าน</option>
+        <template x-for="v in filterOptions.villages" :key="v"><option :value="v" x-text="v"></option></template>
+      </select>
+    </div>
+    <div>
+      <label class="form-label">👩‍⚕️ ผู้ดูแล (CG)</label>
+      <select x-model="filter.caregiverId" @change="loadCases()" class="form-input">
+        <option value="">ทั้งหมด</option>
+        <template x-for="c in filterOptions.caregivers" :key="c.userId">
+          <option :value="c.userId" x-text="c.fullName"></option>
+        </template>
+      </select>
+    </div>
+    <div>
+      <label class="form-label">🎯 สถานะ</label>
+      <select x-model="filter.status" @change="loadCases()" class="form-input">
+        <option value="">ทุกสถานะ</option>
+        <option value="green">🟢 ดูแลตามแผน</option>
+        <option value="yellow">🟡 ใกล้ครบกำหนด</option>
+        <option value="red">🔴 เลยกำหนด/ติดตาม</option>
+        <option value="purple">🟣 Palliative Care</option>
+      </select>
+    </div>
+    <div class="flex items-end">
+      <button @click="resetFilter()" class="btn btn-secondary w-full">↺ ล้างตัวกรอง</button>
+    </div>
+  </div>
+
+  <!-- Legend / counts -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+    <div class="stat-card stat-green !p-3"><div class="stat-icon !w-9 !h-9 !text-base">🟢</div>
+      <div><div class="stat-value !text-xl" x-text="counts.green||0"></div><div class="stat-label">ตามแผน</div></div></div>
+    <div class="stat-card stat-yellow !p-3"><div class="stat-icon !w-9 !h-9 !text-base">🟡</div>
+      <div><div class="stat-value !text-xl" x-text="counts.yellow||0"></div><div class="stat-label">ใกล้ครบ</div></div></div>
+    <div class="stat-card stat-red !p-3"><div class="stat-icon !w-9 !h-9 !text-base">🔴</div>
+      <div><div class="stat-value !text-xl" x-text="counts.red||0"></div><div class="stat-label">เลยกำหนด</div></div></div>
+    <div class="stat-card stat-purple !p-3"><div class="stat-icon !w-9 !h-9 !text-base">🟣</div>
+      <div><div class="stat-value !text-xl" x-text="counts.purple||0"></div><div class="stat-label">Palliative</div></div></div>
+  </div>
+
+  <div x-show="counts.noGps" class="bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-xl p-3 mb-3">
+    ⚠️ มี <b x-text="counts.noGps"></b> เคสที่ยังไม่มีพิกัด GPS (ไม่แสดงบนแผนที่) — เพิ่มพิกัดได้ในหน้าผู้รับบริการ
+  </div>
+
+  <!-- Map container -->
+  <div class="card p-0 overflow-hidden">
+    <div id="ltc-map" style="height: 65vh; min-height: 400px; width: 100%; background:#e2e8f0;"></div>
+  </div>
+
+  <div x-show="loading" class="text-center text-sm text-slate-400 mt-3">⏳ กำลังโหลดแผนที่...</div>
+</div>
+
+<script>
+function mapView() {
+  return {
+    loading: true,
+    filter: { village:'', caregiverId:'', status:'' },
+    filterOptions: { villages:[], caregivers:[] },
+    counts: {},
+    cases: [],
+    _map: null,
+    _markers: [],
+    _initialized: false,
+
+    init() {
+      // init แผนที่เมื่อหน้าถูกแสดง (Leaflet ต้องการ container ที่มองเห็น)
+      window.addEventListener('ltc-page', (e) => {
+        if (e.detail === 'map') {
+          this.$nextTick(() => { this.ensureMap(); if (!this.cases.length) this.loadCases(); });
+        }
+      });
+      // ถ้าเปิดหน้า map อยู่แล้ว
+      if (this.$root.page === 'map') {
+        this.$nextTick(() => { this.ensureMap(); this.loadCases(); });
+      } else {
+        this.loading = false;
+      }
+    },
+
+    ensureMap() {
+      if (this._initialized) { if (this._map) this._map.invalidateSize(); return; }
+      if (typeof L === 'undefined') return;
+      this._map = L.map('ltc-map').setView([13.736717, 100.523186], 12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap', maxZoom: 19
+      }).addTo(this._map);
+      this._initialized = true;
+      setTimeout(() => this._map && this._map.invalidateSize(), 200);
+    },
+
+    async loadCases() {
+      this.loading = true;
+      try {
+        const r = await rpc('api_getMapCases', this.$root.token, this.filter);
+        if (!r.success) { showError(r.message); return; }
+        this.cases = r.data.cases || [];
+        this.counts = r.data.counts || {};
+        this.filterOptions = r.data.filterOptions || { villages:[], caregivers:[] };
+        this.ensureMap();
+        this.renderMarkers(r.data.center);
+      } catch (e) {
+        showError(e.message || 'โหลดแผนที่ไม่สำเร็จ');
+      } finally { this.loading = false; }
+    },
+
+    renderMarkers(center) {
+      if (!this._map) return;
+      // เคลียร์ marker เดิม
+      this._markers.forEach(m => this._map.removeLayer(m));
+      this._markers = [];
+
+      const bounds = [];
+      this.cases.forEach(c => {
+        const icon = L.divIcon({
+          className: 'ltc-marker',
+          html: `<div style="width:22px;height:22px;border-radius:50%;background:${c.statusColor};
+                  border:3px solid white;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`,
+          iconSize: [22,22], iconAnchor: [11,11]
+        });
+        const marker = L.marker([c.lat, c.lng], { icon }).addTo(this._map);
+        marker.bindPopup(this.popupHtml(c), { maxWidth: 280 });
+        this._markers.push(marker);
+        bounds.push([c.lat, c.lng]);
+      });
+
+      if (bounds.length) {
+        this._map.fitBounds(bounds, { padding: [40,40], maxZoom: 16 });
+      } else if (center) {
+        this._map.setView([center.lat, center.lng], 12);
+      }
+    },
+
+    popupHtml(c) {
+      const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`;
+      const phone = c.caregiverPhone || c.mainCaregiverPhone || '-';
+      return `
+        <div style="font-family:'Noto Sans Thai',sans-serif;min-width:200px">
+          <div style="font-weight:700;font-size:14px;color:#1e293b;margin-bottom:2px">${c.fullName}</div>
+          <div style="display:inline-block;background:${c.statusColor};color:#fff;font-size:10px;
+               padding:2px 8px;border-radius:8px;margin-bottom:6px">${c.statusLabel}</div>
+          <div style="font-size:12px;color:#475569;line-height:1.7">
+            👤 ${c.age||'-'} ปี · ${c.sex||'-'}<br>
+            🧩 ADL: <b>${c.adlScore||'-'}/20</b> ${c.taiGroup?('· '+c.taiGroup):''}<br>
+            ${c.ppsScore!==''?('🛏️ PPS: <b>'+c.ppsScore+'%</b><br>'):''}
+            🏠 ${c.village||'-'}<br>
+            📅 เยี่ยมล่าสุด: ${c.lastVisitDate?this.fmt(c.lastVisitDate):'ยังไม่เคย'}<br>
+            ${c.nextVisitDate?('📌 นัดถัดไป: '+this.fmt(c.nextVisitDate)+'<br>'):''}
+            👩‍⚕️ ผู้ดูแล: ${c.caregiverName||'-'}<br>
+            📞 <a href="tel:${phone}" style="color:#2563eb">${phone}</a>
+          </div>
+          <a href="${navUrl}" target="_blank"
+             style="display:block;text-align:center;margin-top:8px;background:#1d4ed8;color:#fff;
+             padding:8px;border-radius:10px;font-size:13px;font-weight:600;text-decoration:none">
+            🧭 นำทาง (Google Maps)
+          </a>
+        </div>`;
+    },
+
+    fmt(d) {
+      const dt = new Date(d);
+      if (isNaN(dt)) return d;
+      const mo = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+      return dt.getDate()+' '+mo[dt.getMonth()]+' '+(dt.getFullYear()+543);
+    },
+
+    resetFilter() {
+      this.filter = { village:'', caregiverId:'', status:'' };
+      this.loadCases();
+    }
+  };
+}
+</script>
+
+        </div>
+
+        <!-- Page: Reports -->
+        <div x-show="page === 'reports'">
+          <!-- ============================================================
+     report.html — Reports & Export
+     ============================================================ -->
+<div x-data="reportView()" x-init="init()">
+
+  <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+    <div>
+      <h1 class="text-xl sm:text-2xl font-bold text-slate-800">📈 รายงานและส่งออกข้อมูล</h1>
+      <p class="text-xs text-slate-500 mt-0.5">เลือกประเภทรายงาน · พิมพ์ / ส่งออก CSV (Excel)</p>
+    </div>
+  </div>
+
+  <!-- Report type tabs -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 mb-4">
+    <template x-for="t in reportTypes" :key="t.id">
+      <button @click="selectType(t.id)"
+              :class="reportType===t.id ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-slate-600 border-slate-200'"
+              class="border-2 rounded-xl px-2 py-3 text-xs font-semibold transition flex flex-col items-center gap-1">
+        <span class="text-lg" x-text="t.icon"></span>
+        <span x-text="t.label"></span>
+      </button>
+    </template>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar mb-4">
+    <div>
+      <label class="form-label">🏘️ หมู่บ้าน</label>
+      <select x-model="filter.village" class="form-input">
+        <option value="">ทั้งหมด</option>
+        <template x-for="v in villages" :key="v"><option :value="v" x-text="v"></option></template>
+      </select>
+    </div>
+    <div>
+      <label class="form-label">📅 ปีงบประมาณ</label>
+      <input type="number" x-model="filter.year" class="form-input" min="2020" max="2050">
+    </div>
+    <div>
+      <label class="form-label">เดือน</label>
+      <select x-model="filter.month" class="form-input">
+        <option value="">ทั้งปี</option>
+        <template x-for="m in 12"><option :value="m" x-text="thaiMonth(m)"></option></template>
+      </select>
+    </div>
+    <div class="flex items-end gap-2 lg:col-span-3">
+      <button @click="runReport()" class="btn btn-primary flex-1" :disabled="loading">🔍 ดึงรายงาน</button>
+      <button @click="exportCSV()" class="btn btn-success" :disabled="!rows.length">⬇️ CSV</button>
+      <button @click="printReport()" class="btn btn-secondary" :disabled="!rows.length">🖨️ พิมพ์</button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div x-show="loading"><div class="skeleton h-64 rounded-2xl"></div></div>
+
+  <!-- Individual report selector -->
+  <div x-show="!loading && reportType==='individual'" class="card mb-4">
+    <label class="form-label">เลือกผู้รับบริการเพื่อดูรายงานรายบุคคล</label>
+    <select x-model="selectedPatientId" @change="loadIndividual()" class="form-input">
+      <option value="">-- เลือก --</option>
+      <template x-for="p in patients" :key="p.PatientID">
+        <option :value="p.PatientID" x-text="p.FullName + ' ('+(p.HN||'-')+')'"></option>
+      </template>
+    </select>
+  </div>
+
+  <!-- Individual report detail -->
+  <div x-show="!loading && reportType==='individual' && individual" id="print-area" class="card">
+    <div class="text-center mb-4 pb-3 border-b">
+      <h2 class="text-lg font-bold" x-text="'รายงานการดูแลรายบุคคล'"></h2>
+      <p class="text-xs text-slate-500" x-text="orgName"></p>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4 text-sm">
+      <div><span class="text-slate-400">ชื่อ:</span> <b x-text="individual?.patient?.FullName"></b></div>
+      <div><span class="text-slate-400">HN:</span> <span x-text="individual?.patient?.HN||'-'"></span></div>
+      <div><span class="text-slate-400">CID:</span> <span class="font-mono" x-text="individual?.patient?.CID||'-'"></span></div>
+      <div><span class="text-slate-400">อายุ:</span> <span x-text="(individual?.patient?.Age||'-')+' ปี'"></span></div>
+      <div><span class="text-slate-400">เพศ:</span> <span x-text="individual?.patient?.Sex||'-'"></span></div>
+      <div><span class="text-slate-400">หมู่บ้าน:</span> <span x-text="individual?.patient?.VillageName||'-'"></span></div>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+      <div class="bg-blue-50 rounded-xl p-3 text-center">
+        <div class="text-xs text-slate-500">ADL</div>
+        <div class="font-bold text-blue-700" x-text="(individual?.latestADL?.TotalADL??'-')+'/20'"></div>
+      </div>
+      <div class="bg-purple-50 rounded-xl p-3 text-center">
+        <div class="text-xs text-slate-500">PPS</div>
+        <div class="font-bold text-purple-700" x-text="(individual?.latestPPS?.PPSScore??'-')+'%'"></div>
+      </div>
+      <div class="bg-pink-50 rounded-xl p-3 text-center">
+        <div class="text-xs text-slate-500">สุขภาพจิต</div>
+        <div class="font-bold text-pink-700 text-xs" x-text="individual?.latestMental?.Result||'-'"></div>
+      </div>
+      <div class="bg-green-50 rounded-xl p-3 text-center">
+        <div class="text-xs text-slate-500">จำนวนเยี่ยม</div>
+        <div class="font-bold text-green-700" x-text="individual?.visitCount||0"></div>
+      </div>
+    </div>
+
+    <div class="section-title">ประวัติการเยี่ยม</div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs">
+        <thead class="bg-slate-50"><tr>
+          <th class="px-2 py-2 text-left">ครั้งที่</th><th class="px-2 py-2 text-left">วันที่</th>
+          <th class="px-2 py-2 text-left">ปัญหาหลัก</th><th class="px-2 py-2 text-left">ผู้เยี่ยม</th>
+        </tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          <template x-for="v in (individual?.visits||[])" :key="v.VisitID">
+            <tr><td class="px-2 py-1.5" x-text="v.VisitNo"></td>
+              <td class="px-2 py-1.5" x-text="fmt(v.VisitDate)"></td>
+              <td class="px-2 py-1.5" x-text="v.MainProblem||'-'"></td>
+              <td class="px-2 py-1.5" x-text="v.VisitorName||'-'"></td></tr>
+          </template>
+          <tr x-show="!individual?.visits?.length"><td colspan="4" class="text-center py-4 text-slate-400">ยังไม่มีการเยี่ยม</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Table reports (village/caregiver/monthly/benefit/overdue/highrisk) -->
+  <div x-show="!loading && reportType!=='individual' && rows.length" id="print-area-table" class="card p-0 overflow-hidden">
+    <div class="px-4 py-3 border-b flex items-center justify-between">
+      <span class="font-bold text-sm" x-text="currentTypeLabel() + ' ('+rows.length+' รายการ)'"></span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50">
+          <tr><template x-for="c in columns" :key="c"><th class="px-3 py-2 text-left whitespace-nowrap" x-text="c"></th></template></tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <template x-for="(row, idx) in rows" :key="idx">
+            <tr class="hover:bg-slate-50">
+              <template x-for="c in columns" :key="c">
+                <td class="px-3 py-2" x-text="row[c]"></td>
+              </template>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div x-show="!loading && reportType!=='individual' && reportType && !rows.length && fetched" class="empty-state">
+    <div class="icon">📭</div><p>ไม่พบข้อมูลสำหรับรายงานนี้</p>
+  </div>
+
+  <div x-show="!reportType" class="empty-state mt-6">
+    <div class="icon">👆</div><p>เลือกประเภทรายงานด้านบน</p>
+  </div>
+</div>
+
+<script>
+function reportView() {
+  return {
+    reportType: '',
+    reportTypes: [
+      { id:'individual', icon:'👤', label:'รายบุคคล' },
+      { id:'village',    icon:'🏘️', label:'รายหมู่บ้าน' },
+      { id:'caregiver',  icon:'👩‍⚕️', label:'รายผู้ดูแล' },
+      { id:'monthly',    icon:'📅', label:'รายเดือน' },
+      { id:'benefit',    icon:'✅', label:'Benefit Package' },
+      { id:'overdue',    icon:'⚠️', label:'เลยกำหนด' },
+      { id:'highrisk',   icon:'🚨', label:'เสี่ยงสูง' }
+    ],
+    filter: { village:'', year: new Date().getFullYear(), month:'' },
+    villages: [],
+    patients: [],
+    selectedPatientId: '',
+    columns: [], rows: [],
+    individual: null,
+    loading: false, fetched: false,
+    orgName: '',
+
+    async init() {
+      this.orgName = this.$root.appConfig?.ORG_NAME || '';
+      try {
+        const r = await rpc('api_getPatients', this.$root.token, {});
+        if (r.success) {
+          this.patients = r.data || [];
+          this.villages = [...new Set(this.patients.map(p => p.VillageName || (p.VillageNo?'ม.'+p.VillageNo:'')).filter(v=>v))].sort();
+        }
+      } catch (e) {}
+    },
+
+    selectType(id) {
+      this.reportType = id;
+      this.rows = []; this.columns = []; this.individual = null; this.fetched = false;
+      if (id !== 'individual') this.runReport();
+    },
+
+    currentTypeLabel() {
+      const t = this.reportTypes.find(x => x.id === this.reportType);
+      return t ? t.label : '';
+    },
+
+    async runReport() {
+      if (!this.reportType) return;
+      if (this.reportType === 'individual') return; // ใช้ loadIndividual
+      this.loading = true; this.fetched = false;
+      try {
+        const r = await rpc('api_exportReport', this.$root.token, this.reportType, this.filter);
+        if (!r.success) { showError(r.message); return; }
+        this.columns = r.data.columns || [];
+        this.rows = r.data.rows || [];
+        this.fetched = true;
+      } catch (e) {
+        showError(e.message || 'ดึงรายงานไม่สำเร็จ');
+      } finally { this.loading = false; }
+    },
+
+    async loadIndividual() {
+      if (!this.selectedPatientId) { this.individual = null; return; }
+      this.loading = true;
+      try {
+        const r = await rpc('api_getIndividualReport', this.$root.token, this.selectedPatientId);
+        if (!r.success) { showError(r.message); return; }
+        this.individual = r.data;
+      } catch (e) {
+        showError(e.message || 'ดึงรายงานไม่สำเร็จ');
+      } finally { this.loading = false; }
+    },
+
+    exportCSV() {
+      if (!this.rows.length) return;
+      const cols = this.columns;
+      const escape = (v) => '"' + String(v==null?'':v).replace(/"/g,'""') + '"';
+      const lines = [cols.map(escape).join(',')];
+      this.rows.forEach(r => lines.push(cols.map(c => escape(r[c])).join(',')));
+      const csv = '﻿' + lines.join('\r\n'); // BOM สำหรับ Excel ภาษาไทย
+      const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = this.reportType + '_' + new Date().toISOString().split('T')[0] + '.csv';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showSuccess('ส่งออก CSV สำเร็จ');
+    },
+
+    printReport() { window.print(); },
+
+    thaiMonth(m) {
+      return ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][m];
+    },
+    fmt(d) { return this.$root.formatThaiDate(d); }
+  };
+}
+</script>
+
+        </div>
+
+        <!-- Page: Settings -->
+        <div x-show="page === 'settings'">
+          <!-- ============================================================
+     setting.html — System Settings (admin) + Notifications
+     ============================================================ -->
+<div x-data="settingView()" x-init="init()">
+
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h1 class="text-xl sm:text-2xl font-bold text-slate-800">⚙️ การตั้งค่าระบบ</h1>
+      <p class="text-xs text-slate-500 mt-0.5">เฉพาะผู้ดูแลระบบ (admin)</p>
+    </div>
+  </div>
+
+  <!-- Not admin -->
+  <div x-show="$root.user?.role !== 'admin'" class="card text-center py-12">
+    <div class="text-5xl mb-3">🔒</div>
+    <h3 class="font-bold text-slate-700">เฉพาะผู้ดูแลระบบ</h3>
+    <p class="text-sm text-slate-500 mt-2">ท่านไม่มีสิทธิ์เข้าถึงหน้านี้</p>
+  </div>
+
+  <div x-show="$root.user?.role === 'admin'">
+    <!-- Tabs -->
+    <div class="flex gap-2 mb-4 border-b border-slate-200">
+      <button @click="tab='general'" :class="tab==='general'?'border-primary-600 text-primary-700':'border-transparent text-slate-500'"
+              class="px-4 py-2 border-b-2 font-semibold text-sm">🏢 ทั่วไป</button>
+      <button @click="tab='line'" :class="tab==='line'?'border-primary-600 text-primary-700':'border-transparent text-slate-500'"
+              class="px-4 py-2 border-b-2 font-semibold text-sm">💬 LINE</button>
+      <button @click="tab='notify'; loadNotifications()" :class="tab==='notify'?'border-primary-600 text-primary-700':'border-transparent text-slate-500'"
+              class="px-4 py-2 border-b-2 font-semibold text-sm">🔔 แจ้งเตือน</button>
+    </div>
+
+    <!-- Loading -->
+    <div x-show="loading"><div class="skeleton h-64 rounded-2xl"></div></div>
+
+    <!-- ── TAB: General ── -->
+    <div x-show="!loading && tab==='general'" class="card">
+      <div class="section-title">🏢 ข้อมูลองค์กรและระบบ</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="form-label">ชื่อแอปพลิเคชัน (APP_NAME)</label>
+          <input type="text" x-model="s.APP_NAME" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">ชื่อองค์กร (ORG_NAME)</label>
+          <input type="text" x-model="s.ORG_NAME" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">ตำบล (SUBDISTRICT_NAME)</label>
+          <input type="text" x-model="s.SUBDISTRICT_NAME" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">อำเภอ (DISTRICT_NAME)</label>
+          <input type="text" x-model="s.DISTRICT_NAME" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">งบ LTC ต่อราย/ปี (บาท)</label>
+          <input type="number" x-model="s.LTC_BUDGET_PER_PERSON_YEAR" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">URL ของ Web App (WEBAPP_URL)</label>
+          <input type="text" x-model="s.WEBAPP_URL" class="form-input" placeholder="https://script.google.com/...">
+        </div>
+        <div class="sm:col-span-2">
+          <label class="form-label">Drive Folder ID เก็บรูปภาพ (DRIVE_FOLDER_LTC_PHOTO)</label>
+          <input type="text" x-model="s.DRIVE_FOLDER_LTC_PHOTO" class="form-input font-mono text-sm"
+                 placeholder="เว้นว่าง = ระบบสร้างให้อัตโนมัติ">
+          <p class="text-xs text-slate-400 mt-1">หากเว้นว่าง ระบบจะสร้างโฟลเดอร์ใหม่อัตโนมัติเมื่ออัปโหลดรูปครั้งแรก</p>
+        </div>
+      </div>
+      <div class="mt-4 pt-4 border-t">
+        <button @click="save()" class="btn btn-primary" :disabled="saving">
+          <span x-text="saving?'⏳ บันทึก...':'💾 บันทึกการตั้งค่า'"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ── TAB: LINE ── -->
+    <div x-show="!loading && tab==='line'" class="card">
+      <div class="section-title">💬 LINE Messaging API</div>
+      <div class="bg-blue-50 rounded-xl p-3 mb-4 text-xs text-blue-800">
+        ใช้ LINE Official Account (Messaging API) — สร้างที่
+        <a href="https://developers.line.biz/" target="_blank" class="underline font-semibold">developers.line.biz</a>
+        คัดลอก Channel Access Token และ Group/User ID ปลายทาง
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="form-label">Channel Access Token</label>
+          <div class="flex gap-2">
+            <input :type="showToken?'text':'password'" x-model="s.LINE_CHANNEL_ACCESS_TOKEN"
+                   class="form-input font-mono text-sm" placeholder="(ซ่อนไว้เพื่อความปลอดภัย)">
+            <button type="button" @click="showToken=!showToken" class="btn btn-secondary btn-sm flex-shrink-0">
+              <span x-text="showToken?'🙈':'👁️'"></span>
+            </button>
+          </div>
+          <p class="text-xs text-amber-600 mt-1" x-show="masked.LINE_CHANNEL_ACCESS_TOKEN">
+            🔒 Token ถูกซ่อนบางส่วน — แก้ไขเฉพาะเมื่อต้องการเปลี่ยน
+          </p>
+        </div>
+        <div>
+          <label class="form-label">LINE Group / User ID ปลายทาง</label>
+          <input type="text" x-model="s.LINE_GROUP_ID" class="form-input font-mono text-sm" placeholder="Cxxxxxxxx / Uxxxxxxxx">
+        </div>
+      </div>
+      <div class="mt-4 pt-4 border-t flex flex-wrap gap-2">
+        <button @click="save()" class="btn btn-primary" :disabled="saving">💾 บันทึก</button>
+        <button @click="testLine()" class="btn btn-outline" :disabled="testing">
+          <span x-text="testing?'⏳...':'📤 ทดสอบส่งข้อความ'"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ── TAB: Notifications ── -->
+    <div x-show="!loading && tab==='notify'">
+      <!-- Manual triggers -->
+      <div class="card mb-4">
+        <div class="section-title">🔔 ส่งแจ้งเตือนด้วยตนเอง</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <button @click="runNotify('api_notifyUpcomingVisits')" class="btn btn-outline justify-start" :disabled="notifying">📅 นัดใกล้ครบกำหนด</button>
+          <button @click="runNotify('api_notifyOverdueVisits')" class="btn btn-outline justify-start" :disabled="notifying">⚠️ เคสเลยกำหนด</button>
+          <button @click="runNotify('api_notifyHighRiskMentalHealth')" class="btn btn-outline justify-start" :disabled="notifying">🚨 สุขภาพจิตเสี่ยงสูง</button>
+          <button @click="runNotify('api_notifyAbnormalVitalSigns')" class="btn btn-outline justify-start" :disabled="notifying">🩺 สัญญาณชีพผิดปกติ</button>
+          <button @click="runNotify('api_notifyPPSDecline')" class="btn btn-outline justify-start" :disabled="notifying">📉 PPS ลดลง</button>
+        </div>
+        <div class="mt-3 flex gap-2">
+          <input type="text" x-model="customMsg" class="form-input" placeholder="พิมพ์ข้อความส่งเอง...">
+          <button @click="sendCustom()" class="btn btn-success flex-shrink-0" :disabled="!customMsg || notifying">📤 ส่ง</button>
+        </div>
+      </div>
+
+      <!-- History -->
+      <div class="card p-0 overflow-hidden">
+        <div class="px-4 py-3 border-b flex items-center justify-between">
+          <span class="font-bold text-sm">ประวัติการแจ้งเตือน</span>
+          <button @click="loadNotifications()" class="btn btn-secondary btn-sm">🔄</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead class="bg-slate-50"><tr>
+              <th class="px-3 py-2 text-left">เวลา</th><th class="px-3 py-2 text-left">ประเภท</th>
+              <th class="px-3 py-2 text-left">ข้อความ</th><th class="px-3 py-2 text-center">สถานะ</th>
+              <th class="px-3 py-2 text-center">จัดการ</th>
+            </tr></thead>
+            <tbody class="divide-y divide-slate-100">
+              <template x-for="n in notifications" :key="n.NotificationID">
+                <tr>
+                  <td class="px-3 py-2 whitespace-nowrap text-slate-500" x-text="fmtDateTime(n.CreatedAt)"></td>
+                  <td class="px-3 py-2"><span class="badge badge-blue" x-text="n.NotificationType"></span></td>
+                  <td class="px-3 py-2 max-w-xs truncate" x-text="n.Message"></td>
+                  <td class="px-3 py-2 text-center">
+                    <span class="badge" :class="n.Status==='sent'?'badge-green':'badge-red'"
+                          x-text="n.Status==='sent'?'สำเร็จ':'ล้มเหลว'"></span>
+                  </td>
+                  <td class="px-3 py-2 text-center">
+                    <button @click="resend(n.NotificationID)" class="btn btn-secondary btn-sm">↻ ส่งซ้ำ</button>
+                  </td>
+                </tr>
+              </template>
+              <tr x-show="!notifications.length"><td colspan="5" class="text-center py-6 text-slate-400">ยังไม่มีประวัติ</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function settingView() {
+  return {
+    tab: 'general',
+    s: {},
+    masked: {},
+    loading: true,
+    saving: false,
+    testing: false,
+    notifying: false,
+    showToken: false,
+    notifications: [],
+    customMsg: '',
+
+    async init() {
+      if (this.$root.user?.role !== 'admin') { this.loading = false; return; }
+      await this.load();
+    },
+
+    async load() {
+      this.loading = true;
+      try {
+        const r = await rpc('api_getSettings', this.$root.token);
+        if (!r.success) { showError(r.message); return; }
+        this.s = r.data.settings || {};
+        this.masked = r.data.masked || {};
+      } catch (e) {
+        showError(e.message || 'โหลดการตั้งค่าไม่สำเร็จ');
+      } finally { this.loading = false; }
+    },
+
+    async save() {
+      const ok = await showConfirm('บันทึกการตั้งค่า?', 'การเปลี่ยนแปลงจะมีผลทันที');
+      if (!ok) return;
+      this.saving = true;
+      try {
+        const r = await rpc('api_saveSettings', this.$root.token, this.s);
+        if (!r.success) { showError(r.message); return; }
+        showSuccess(r.message);
+        // โหลดใหม่เพื่อ mask token อีกครั้ง
+        await this.load();
+      } catch (e) {
+        showError(e.message || 'บันทึกไม่สำเร็จ');
+      } finally { this.saving = false; }
+    },
+
+    async testLine() {
+      this.testing = true;
+      try {
+        const r = await rpc('api_sendLineAlert', this.$root.token,
+          '🔔 ทดสอบการแจ้งเตือนจากระบบ ' + (this.s.APP_NAME||'LTC Care Report'), '');
+        if (r.success) showSuccess('ส่งข้อความทดสอบสำเร็จ');
+        else showError(r.message);
+      } catch (e) { showError(e.message); }
+      finally { this.testing = false; }
+    },
+
+    async runNotify(fnName) {
+      const ok = await showConfirm('ส่งแจ้งเตือน?', 'ระบบจะส่งข้อความสรุปไปยัง LINE');
+      if (!ok) return;
+      this.notifying = true;
+      try {
+        const r = await rpc(fnName, this.$root.token);
+        if (r.success) {
+          Swal.fire({ icon:'success', title:'ส่งแล้ว', text: r.message });
+          this.loadNotifications();
+        } else showError(r.message);
+      } catch (e) { showError(e.message); }
+      finally { this.notifying = false; }
+    },
+
+    async sendCustom() {
+      if (!this.customMsg) return;
+      this.notifying = true;
+      try {
+        const r = await rpc('api_sendLineAlert', this.$root.token, this.customMsg, '');
+        if (r.success) { showSuccess('ส่งสำเร็จ'); this.customMsg=''; this.loadNotifications(); }
+        else showError(r.message);
+      } catch (e) { showError(e.message); }
+      finally { this.notifying = false; }
+    },
+
+    async loadNotifications() {
+      try {
+        const r = await rpc('api_getNotifications', this.$root.token, 100);
+        if (r.success) this.notifications = r.data || [];
+      } catch (e) {}
+    },
+
+    async resend(id) {
+      const ok = await showConfirm('ส่งซ้ำ?', 'ระบบจะส่งข้อความนี้อีกครั้ง');
+      if (!ok) return;
+      try {
+        const r = await rpc('api_resendNotification', this.$root.token, id);
+        if (r.success) { showSuccess('ส่งซ้ำสำเร็จ'); this.loadNotifications(); }
+        else showError(r.message);
+      } catch (e) { showError(e.message); }
+    },
+
+    fmtDateTime(iso) {
+      if (!iso) return '-';
+      const d = new Date(iso);
+      if (isNaN(d)) return iso;
+      return d.toLocaleString('th-TH', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+    }
+  };
+}
+</script>
+
+        </div>
+
+        <!-- Page: อื่นๆ (placeholder) -->
+        <div x-show="!['dashboard','patients','visits','assessment','map','reports','settings'].includes(page)" class="card text-center py-16">
+          <div class="text-5xl mb-3">🚧</div>
+          <h3 class="font-bold text-slate-700" x-text="pageTitle()"></h3>
+          <p class="text-sm text-slate-500 mt-2">หน้านี้กำลังพัฒนาในเฟสถัดไป</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- ── Bottom Navigation (Mobile) ── -->
+    <nav class="md:hidden fixed bottom-0 inset-x-0 z-20 bg-white border-t border-slate-200 shadow-lg">
+      <div class="grid grid-cols-5">
+        <template x-for="item in navItems.filter(n => n.bottom)" :key="item.page">
+          <button x-show="canAccess(item.roles)"
+                  @click="showPage(item.page)"
+                  :class="page === item.page ? 'text-primary-700' : 'text-slate-400'"
+                  class="flex flex-col items-center py-2 text-xs">
+            <span class="text-xl mb-0.5" x-text="item.icon"></span>
+            <span x-text="item.shortLabel"></span>
+          </button>
+        </template>
+      </div>
+    </nav>
+  </div>
+
+  <!-- ── Global Loading Overlay ── -->
+  <div x-show="loading"
+       class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div class="bg-white rounded-2xl px-6 py-5 shadow-2xl flex items-center gap-3">
+      <svg class="animate-spin w-6 h-6 text-primary-600" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+      </svg>
+      <span class="text-sm font-medium text-slate-700" x-text="loadingText"></span>
+    </div>
+  </div>
+
+  <script>
+/* ============================================================
+   LTC Care Report — Frontend Controller (Phase 5)
+   ============================================================ */
+
+/**
+ * rpc(name, ...args) — เรียก backend แบบ dual-mode
+ *  • ถ้า window.LTC_API_URL ถูกตั้ง (host บน GitHub Pages) → เรียก GAS REST API ผ่าน fetch
+ *  • ถ้าไม่ตั้ง (host ภายใน GAS เอง) → ใช้ google.script.run เหมือนเดิม
+ * คืน Promise ที่ resolve เป็น { success, data, message }
+ */
+function rpc(name, ...args) {
+  // ── Mode A: REST (GitHub Pages / external) ──
+  if (typeof window !== 'undefined' && window.LTC_API_URL) {
+    return fetch(window.LTC_API_URL, {
+      method: 'POST',
+      // text/plain = simple request → เลี่ยง CORS preflight ที่ GAS ตอบไม่ได้
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'invoke',
+        fn: name,
+        args: args,
+        apiKey: window.LTC_API_KEY || undefined
+      })
+    })
+    .then(res => {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .catch(err => ({ success: false, data: null, message: 'เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ: ' + (err && err.message ? err.message : err) }));
+  }
+
+  // ── Mode B: google.script.run (hosted inside GAS) ──
+  return new Promise((resolve, reject) => {
+    if (typeof google === 'undefined' || !google.script || !google.script.run) {
+      reject(new Error('Google Apps Script ไม่พร้อมใช้งาน'));
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(err => reject(err instanceof Error ? err : new Error(String(err))))
+      [name](...args);
+  });
+}
+
+/** showSuccess(message) — แสดง toast แบบสำเร็จ */
+function showSuccess(message) {
+  Swal.fire({
+    toast: true, position: 'top-end', icon: 'success',
+    title: message || 'สำเร็จ',
+    showConfirmButton: false, timer: 2500, timerProgressBar: true
+  });
+}
+
+/** showError(message) — แสดง dialog แบบผิดพลาด */
+function showError(message) {
+  Swal.fire({
+    icon: 'error', title: 'เกิดข้อผิดพลาด',
+    text: message || 'ไม่ทราบสาเหตุ', confirmButtonColor: '#1d4ed8',
+    confirmButtonText: 'ตกลง'
+  });
+}
+
+/** showConfirm(title, text) — dialog ยืนยัน */
+function showConfirm(title, text) {
+  return Swal.fire({
+    title: title || 'ยืนยัน?', text: text || '',
+    icon: 'question', showCancelButton: true,
+    confirmButtonText: 'ตกลง', cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#1d4ed8', cancelButtonColor: '#64748b'
+  }).then(r => r.isConfirmed);
+}
+
+// ============================================================
+// ── Main App (Alpine.js) ────────────────────────────────────
+// ============================================================
+function app() {
+  return {
+    // ── State ──
+    user: null,
+    token: null,
+    appConfig: {},
+    page: 'dashboard',
+    loading: false,
+    loadingText: 'กำลังโหลด...',
+
+    // ── Login ──
+    loginForm: { username: '', password: '' },
+    loginError: '',
+    loginLoading: false,
+    showPass: false,
+
+    // ── Navigation ──
+    navItems: [
+      { page:'dashboard',   label:'หน้าหลัก',         shortLabel:'หลัก',     icon:'📊', bottom:true,  roles:['admin','cm','cg','viewer'] },
+      { page:'patients',    label:'ผู้รับบริการ',      shortLabel:'ผู้ป่วย',  icon:'👥', bottom:true,  roles:['admin','cm','cg','viewer'] },
+      { page:'visits',      label:'การเยี่ยมบ้าน',     shortLabel:'เยี่ยม',  icon:'🚪', bottom:true,  roles:['admin','cm','cg'] },
+      { page:'assessment',  label:'แบบประเมิน',       shortLabel:'ประเมิน',  icon:'📋', bottom:true,  roles:['admin','cm','cg'] },
+      { page:'map',         label:'แผนที่เคส',         shortLabel:'แผนที่',   icon:'🗺️', bottom:false, roles:['admin','cm','cg','viewer'] },
+      { page:'reports',     label:'รายงาน',           shortLabel:'รายงาน',   icon:'📈', bottom:false, roles:['admin','cm','viewer'] },
+      { page:'settings',    label:'การตั้งค่า',       shortLabel:'ตั้งค่า',  icon:'⚙️', bottom:false, roles:['admin','cm','cg','viewer'] },
+    ],
+
+    // ── Dashboard ──
+    dashboard: null,
+    dashboardLoading: true,
+    dashboardError: '',
+    filter: {
+      dateFrom: '', dateTo: '',
+      village: '', careManagerId: '', caregiverId: '', status: ''
+    },
+
+    // ============================================================
+    // ── Init / Auth ─────────────────────────────────────────────
+    // ============================================================
+    async init() {
+      // โหลด appConfig (ไม่ต้อง auth)
+      try {
+        const r = await rpc('api_getAppConfig');
+        if (r.success) this.appConfig = r.data.settings || {};
+      } catch (e) { /* silent */ }
+
+      // ตรวจ session เดิม
+      const saved = sessionStorage.getItem('ltc_token');
+      if (saved) {
+        this.token = saved;
+        try {
+          const r = await rpc('api_getCurrentUser', saved);
+          if (r.success && r.data) {
+            this.user = r.data;
+            await this.loadDashboard();
+          } else {
+            this.clearSession();
+          }
+        } catch (e) {
+          this.clearSession();
+        }
+      }
+    },
+
+    async doLogin() {
+      this.loginError = '';
+      this.loginLoading = true;
+      try {
+        const r = await rpc('api_login', this.loginForm.username, this.loginForm.password);
+        if (!r.success) { this.loginError = r.message; return; }
+        this.token = r.data.token;
+        this.user  = r.data.user;
+        sessionStorage.setItem('ltc_token', this.token);
+        showSuccess('เข้าสู่ระบบสำเร็จ');
+        await this.loadDashboard();
+      } catch (e) {
+        this.loginError = (e && e.message) ? e.message : 'เข้าสู่ระบบไม่สำเร็จ';
+      } finally {
+        this.loginLoading = false;
+      }
+    },
+
+    async logout() {
+      const ok = await showConfirm('ออกจากระบบ?', 'ท่านต้องการออกจากระบบใช่หรือไม่?');
+      if (!ok) return;
+      try { await rpc('api_logout', this.token); } catch (e) {}
+      this.clearSession();
+    },
+
+    clearSession() {
+      sessionStorage.removeItem('ltc_token');
+      this.token = null;
+      this.user = null;
+      this.dashboard = null;
+      this.loginForm = { username:'', password:'' };
+    },
+
+    // ============================================================
+    // ── Navigation ──────────────────────────────────────────────
+    // ============================================================
+    showPage(pageName) {
+      this.page = pageName;
+      const main = document.getElementById('main');
+      if (main) main.scrollTop = 0;
+      if (pageName === 'dashboard' && !this.dashboard) this.loadDashboard();
+      // แจ้ง component ย่อย (เช่น map) ว่าหน้าเปลี่ยน
+      try { window.dispatchEvent(new CustomEvent('ltc-page', { detail: pageName })); } catch (e) {}
+    },
+
+    pageTitle() {
+      const item = this.navItems.find(n => n.page === this.page);
+      return item ? item.label : '';
+    },
+
+    canAccess(roles) {
+      if (!roles || !this.user) return !!this.user;
+      return roles.includes(this.user.role);
+    },
+
+    roleLabel(role) {
+      return ({
+        admin:'ผู้ดูแลระบบ', cm:'Care Manager',
+        cg:'Caregiver', viewer:'ผู้ดูข้อมูล'
+      })[role] || role || '';
+    },
+
+    // ============================================================
+    // ── Loading ─────────────────────────────────────────────────
+    // ============================================================
+    showLoading(text) { this.loading = true; this.loadingText = text || 'กำลังโหลด...'; },
+    hideLoading()     { this.loading = false; },
+
+    // ============================================================
+    // ── Dashboard ───────────────────────────────────────────────
+    // ============================================================
+    async loadDashboard() {
+      this.dashboardLoading = true;
+      this.dashboardError = '';
+      try {
+        const r = await rpc('api_getDashboardData', this.token, this.filter);
+        if (!r.success) {
+          this.dashboardError = r.message || 'ดึงข้อมูลไม่สำเร็จ';
+          showError(this.dashboardError);
+          return;
+        }
+        this.dashboard = r.data;
+      } catch (e) {
+        this.dashboardError = (e && e.message) ? e.message : 'ดึงข้อมูลไม่สำเร็จ';
+        showError(this.dashboardError);
+      } finally {
+        this.dashboardLoading = false;
+      }
+    },
+
+    async applyFilter() {
+      await this.loadDashboard();
+    },
+
+    resetFilter() {
+      this.filter = { dateFrom:'', dateTo:'', village:'', careManagerId:'', caregiverId:'', status:'' };
+      this.loadDashboard();
+    },
+
+    // ============================================================
+    // ── Helpers (Display) ───────────────────────────────────────
+    // ============================================================
+    formatThaiDate(iso) {
+      if (!iso) return '-';
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return String(iso);
+      const months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+      return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543}`;
+    },
+
+    formatMonth(yyyymm) {
+      if (!yyyymm) return '';
+      const [y, m] = yyyymm.split('-');
+      const months = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+      return months[parseInt(m)] + ' ' + (parseInt(y) + 543 - 2500);
+    },
+
+    formatNumber(n) {
+      if (n == null || n === '') return '0';
+      return Number(n).toLocaleString('th-TH');
+    },
+
+    /** maxValue() — หา max ใน array เพื่อ scale chart */
+    maxValue(arr, key) {
+      if (!arr || !arr.length) return 1;
+      const max = Math.max(...arr.map(x => Number(x[key]) || 0));
+      return max > 0 ? max : 1;
+    },
+
+    barHeight(value, max) {
+      const pct = Math.max(4, (Number(value) / Number(max)) * 100);
+      return pct + '%';
+    },
+
+    statusLabel(s) {
+      return ({ draft:'ฉบับร่าง', active:'ใช้งานอยู่', completed:'เสร็จสิ้น', cancelled:'ยกเลิก' })[s] || s;
+    },
+
+    statusColor(s) {
+      return ({ draft:'gray', active:'green', completed:'blue', cancelled:'red' })[s] || 'gray';
+    }
+  };
+}
+
+// ============================================================
+// ── Global Error Logging ────────────────────────────────────
+// ============================================================
+window.addEventListener('error', function(e) {
+  try {
+    rpc('api_logClientError', {
+      type: 'error',
+      message: String(e.message || ''),
+      source: String(e.filename || ''),
+      line: e.lineno || 0, col: e.colno || 0,
+      stack: e.error && e.error.stack ? String(e.error.stack).substring(0, 1000) : '',
+      userAgent: String(navigator.userAgent || '').substring(0, 200),
+      url: location.href
+    }).catch(function(){});
+  } catch (err) {}
+});
+
+window.addEventListener('unhandledrejection', function(e) {
+  try {
+    rpc('api_logClientError', {
+      type: 'unhandledrejection',
+      message: String((e.reason && e.reason.message) || e.reason || ''),
+      stack: (e.reason && e.reason.stack) ? String(e.reason.stack).substring(0, 1000) : '',
+      url: location.href
+    }).catch(function(){});
+  } catch (err) {}
+});
+</script>
+
+</body>
+</html>
