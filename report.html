@@ -1,0 +1,248 @@
+<!-- ============================================================
+     report.html — Reports & Export
+     ============================================================ -->
+<div x-data="reportView()" x-init="init()">
+
+  <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+    <div>
+      <h1 class="text-xl sm:text-2xl font-bold text-slate-800">📈 รายงานและส่งออกข้อมูล</h1>
+      <p class="text-xs text-slate-500 mt-0.5">เลือกประเภทรายงาน · พิมพ์ / ส่งออก CSV (Excel)</p>
+    </div>
+  </div>
+
+  <!-- Report type tabs -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 mb-4">
+    <template x-for="t in reportTypes" :key="t.id">
+      <button @click="selectType(t.id)"
+              :class="reportType===t.id ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-slate-600 border-slate-200'"
+              class="border-2 rounded-xl px-2 py-3 text-xs font-semibold transition flex flex-col items-center gap-1">
+        <span class="text-lg" x-text="t.icon"></span>
+        <span x-text="t.label"></span>
+      </button>
+    </template>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar mb-4">
+    <div>
+      <label class="form-label">🏘️ หมู่บ้าน</label>
+      <select x-model="filter.village" class="form-input">
+        <option value="">ทั้งหมด</option>
+        <template x-for="v in villages" :key="v"><option :value="v" x-text="v"></option></template>
+      </select>
+    </div>
+    <div>
+      <label class="form-label">📅 ปีงบประมาณ</label>
+      <input type="number" x-model="filter.year" class="form-input" min="2020" max="2050">
+    </div>
+    <div>
+      <label class="form-label">เดือน</label>
+      <select x-model="filter.month" class="form-input">
+        <option value="">ทั้งปี</option>
+        <template x-for="m in 12"><option :value="m" x-text="thaiMonth(m)"></option></template>
+      </select>
+    </div>
+    <div class="flex items-end gap-2 lg:col-span-3">
+      <button @click="runReport()" class="btn btn-primary flex-1" :disabled="loading">🔍 ดึงรายงาน</button>
+      <button @click="exportCSV()" class="btn btn-success" :disabled="!rows.length">⬇️ CSV</button>
+      <button @click="printReport()" class="btn btn-secondary" :disabled="!rows.length">🖨️ พิมพ์</button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div x-show="loading"><div class="skeleton h-64 rounded-2xl"></div></div>
+
+  <!-- Individual report selector -->
+  <div x-show="!loading && reportType==='individual'" class="card mb-4">
+    <label class="form-label">เลือกผู้รับบริการเพื่อดูรายงานรายบุคคล</label>
+    <select x-model="selectedPatientId" @change="loadIndividual()" class="form-input">
+      <option value="">-- เลือก --</option>
+      <template x-for="p in patients" :key="p.PatientID">
+        <option :value="p.PatientID" x-text="p.FullName + ' ('+(p.HN||'-')+')'"></option>
+      </template>
+    </select>
+  </div>
+
+  <!-- Individual report detail -->
+  <div x-show="!loading && reportType==='individual' && individual" id="print-area" class="card">
+    <div class="text-center mb-4 pb-3 border-b">
+      <h2 class="text-lg font-bold" x-text="'รายงานการดูแลรายบุคคล'"></h2>
+      <p class="text-xs text-slate-500" x-text="orgName"></p>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4 text-sm">
+      <div><span class="text-slate-400">ชื่อ:</span> <b x-text="individual?.patient?.FullName"></b></div>
+      <div><span class="text-slate-400">HN:</span> <span x-text="individual?.patient?.HN||'-'"></span></div>
+      <div><span class="text-slate-400">CID:</span> <span class="font-mono" x-text="individual?.patient?.CID||'-'"></span></div>
+      <div><span class="text-slate-400">อายุ:</span> <span x-text="(individual?.patient?.Age||'-')+' ปี'"></span></div>
+      <div><span class="text-slate-400">เพศ:</span> <span x-text="individual?.patient?.Sex||'-'"></span></div>
+      <div><span class="text-slate-400">หมู่บ้าน:</span> <span x-text="individual?.patient?.VillageName||'-'"></span></div>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+      <div class="bg-blue-50 rounded-xl p-3 text-center">
+        <div class="text-xs text-slate-500">ADL</div>
+        <div class="font-bold text-blue-700" x-text="(individual?.latestADL?.TotalADL??'-')+'/20'"></div>
+      </div>
+      <div class="bg-purple-50 rounded-xl p-3 text-center">
+        <div class="text-xs text-slate-500">PPS</div>
+        <div class="font-bold text-purple-700" x-text="(individual?.latestPPS?.PPSScore??'-')+'%'"></div>
+      </div>
+      <div class="bg-pink-50 rounded-xl p-3 text-center">
+        <div class="text-xs text-slate-500">สุขภาพจิต</div>
+        <div class="font-bold text-pink-700 text-xs" x-text="individual?.latestMental?.Result||'-'"></div>
+      </div>
+      <div class="bg-green-50 rounded-xl p-3 text-center">
+        <div class="text-xs text-slate-500">จำนวนเยี่ยม</div>
+        <div class="font-bold text-green-700" x-text="individual?.visitCount||0"></div>
+      </div>
+    </div>
+
+    <div class="section-title">ประวัติการเยี่ยม</div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs">
+        <thead class="bg-slate-50"><tr>
+          <th class="px-2 py-2 text-left">ครั้งที่</th><th class="px-2 py-2 text-left">วันที่</th>
+          <th class="px-2 py-2 text-left">ปัญหาหลัก</th><th class="px-2 py-2 text-left">ผู้เยี่ยม</th>
+        </tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          <template x-for="v in (individual?.visits||[])" :key="v.VisitID">
+            <tr><td class="px-2 py-1.5" x-text="v.VisitNo"></td>
+              <td class="px-2 py-1.5" x-text="fmt(v.VisitDate)"></td>
+              <td class="px-2 py-1.5" x-text="v.MainProblem||'-'"></td>
+              <td class="px-2 py-1.5" x-text="v.VisitorName||'-'"></td></tr>
+          </template>
+          <tr x-show="!individual?.visits?.length"><td colspan="4" class="text-center py-4 text-slate-400">ยังไม่มีการเยี่ยม</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Table reports (village/caregiver/monthly/benefit/overdue/highrisk) -->
+  <div x-show="!loading && reportType!=='individual' && rows.length" id="print-area-table" class="card p-0 overflow-hidden">
+    <div class="px-4 py-3 border-b flex items-center justify-between">
+      <span class="font-bold text-sm" x-text="currentTypeLabel() + ' ('+rows.length+' รายการ)'"></span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50">
+          <tr><template x-for="c in columns" :key="c"><th class="px-3 py-2 text-left whitespace-nowrap" x-text="c"></th></template></tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <template x-for="(row, idx) in rows" :key="idx">
+            <tr class="hover:bg-slate-50">
+              <template x-for="c in columns" :key="c">
+                <td class="px-3 py-2" x-text="row[c]"></td>
+              </template>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div x-show="!loading && reportType!=='individual' && reportType && !rows.length && fetched" class="empty-state">
+    <div class="icon">📭</div><p>ไม่พบข้อมูลสำหรับรายงานนี้</p>
+  </div>
+
+  <div x-show="!reportType" class="empty-state mt-6">
+    <div class="icon">👆</div><p>เลือกประเภทรายงานด้านบน</p>
+  </div>
+</div>
+
+<script>
+function reportView() {
+  return {
+    reportType: '',
+    reportTypes: [
+      { id:'individual', icon:'👤', label:'รายบุคคล' },
+      { id:'village',    icon:'🏘️', label:'รายหมู่บ้าน' },
+      { id:'caregiver',  icon:'👩‍⚕️', label:'รายผู้ดูแล' },
+      { id:'monthly',    icon:'📅', label:'รายเดือน' },
+      { id:'benefit',    icon:'✅', label:'Benefit Package' },
+      { id:'overdue',    icon:'⚠️', label:'เลยกำหนด' },
+      { id:'highrisk',   icon:'🚨', label:'เสี่ยงสูง' }
+    ],
+    filter: { village:'', year: new Date().getFullYear(), month:'' },
+    villages: [],
+    patients: [],
+    selectedPatientId: '',
+    columns: [], rows: [],
+    individual: null,
+    loading: false, fetched: false,
+    orgName: '',
+
+    async init() {
+      this.orgName = this.$root.appConfig?.ORG_NAME || '';
+      try {
+        const r = await rpc('api_getPatients', this.$root.token, {});
+        if (r.success) {
+          this.patients = r.data || [];
+          this.villages = [...new Set(this.patients.map(p => p.VillageName || (p.VillageNo?'ม.'+p.VillageNo:'')).filter(v=>v))].sort();
+        }
+      } catch (e) {}
+    },
+
+    selectType(id) {
+      this.reportType = id;
+      this.rows = []; this.columns = []; this.individual = null; this.fetched = false;
+      if (id !== 'individual') this.runReport();
+    },
+
+    currentTypeLabel() {
+      const t = this.reportTypes.find(x => x.id === this.reportType);
+      return t ? t.label : '';
+    },
+
+    async runReport() {
+      if (!this.reportType) return;
+      if (this.reportType === 'individual') return; // ใช้ loadIndividual
+      this.loading = true; this.fetched = false;
+      try {
+        const r = await rpc('api_exportReport', this.$root.token, this.reportType, this.filter);
+        if (!r.success) { showError(r.message); return; }
+        this.columns = r.data.columns || [];
+        this.rows = r.data.rows || [];
+        this.fetched = true;
+      } catch (e) {
+        showError(e.message || 'ดึงรายงานไม่สำเร็จ');
+      } finally { this.loading = false; }
+    },
+
+    async loadIndividual() {
+      if (!this.selectedPatientId) { this.individual = null; return; }
+      this.loading = true;
+      try {
+        const r = await rpc('api_getIndividualReport', this.$root.token, this.selectedPatientId);
+        if (!r.success) { showError(r.message); return; }
+        this.individual = r.data;
+      } catch (e) {
+        showError(e.message || 'ดึงรายงานไม่สำเร็จ');
+      } finally { this.loading = false; }
+    },
+
+    exportCSV() {
+      if (!this.rows.length) return;
+      const cols = this.columns;
+      const escape = (v) => '"' + String(v==null?'':v).replace(/"/g,'""') + '"';
+      const lines = [cols.map(escape).join(',')];
+      this.rows.forEach(r => lines.push(cols.map(c => escape(r[c])).join(',')));
+      const csv = '﻿' + lines.join('\r\n'); // BOM สำหรับ Excel ภาษาไทย
+      const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = this.reportType + '_' + new Date().toISOString().split('T')[0] + '.csv';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showSuccess('ส่งออก CSV สำเร็จ');
+    },
+
+    printReport() { window.print(); },
+
+    thaiMonth(m) {
+      return ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][m];
+    },
+    fmt(d) { return this.$root.formatThaiDate(d); }
+  };
+}
+</script>

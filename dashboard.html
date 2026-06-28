@@ -1,0 +1,284 @@
+<!-- ============================================================
+     Dashboard View (Phase 5)
+     ============================================================ -->
+
+<!-- ── Header ── -->
+<div class="flex items-center justify-between mb-5">
+  <div>
+    <h1 class="text-xl sm:text-2xl font-bold text-slate-800">📊 หน้าหลัก</h1>
+    <p class="text-xs text-slate-500 mt-0.5">
+      ภาพรวมระบบการดูแลผู้สูงอายุและผู้พึ่งพิง
+      <span x-show="dashboard?.generatedAt">
+        · อัปเดต <span x-text="formatThaiDate(dashboard.generatedAt)"></span>
+      </span>
+    </p>
+  </div>
+  <button @click="loadDashboard()" class="btn btn-secondary btn-sm" :disabled="dashboardLoading">
+    <span x-text="dashboardLoading ? '⏳' : '🔄'"></span>
+    <span class="hidden sm:inline">รีเฟรช</span>
+  </button>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- ── FILTER BAR ────────────────────────────────────────── -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="filter-bar">
+  <div>
+    <label class="form-label">📅 วันที่เริ่ม</label>
+    <input type="date" x-model="filter.dateFrom" class="form-input">
+  </div>
+  <div>
+    <label class="form-label">📅 วันที่สิ้นสุด</label>
+    <input type="date" x-model="filter.dateTo" class="form-input">
+  </div>
+  <div>
+    <label class="form-label">🏘️ หมู่บ้าน</label>
+    <select x-model="filter.village" class="form-input">
+      <option value="">ทุกหมู่บ้าน</option>
+      <template x-for="v in (dashboard?.filterOptions?.villages || [])" :key="v">
+        <option :value="v" x-text="v"></option>
+      </template>
+    </select>
+  </div>
+  <div>
+    <label class="form-label">👨‍⚕️ Care Manager</label>
+    <select x-model="filter.careManagerId" class="form-input">
+      <option value="">ทั้งหมด</option>
+      <template x-for="cg in (dashboard?.filterOptions?.caregivers || []).filter(c=>c.role==='cm')" :key="cg.userId">
+        <option :value="cg.userId" x-text="cg.fullName"></option>
+      </template>
+    </select>
+  </div>
+  <div>
+    <label class="form-label">👩‍⚕️ Caregiver</label>
+    <select x-model="filter.caregiverId" class="form-input">
+      <option value="">ทั้งหมด</option>
+      <template x-for="cg in (dashboard?.filterOptions?.caregivers || []).filter(c=>c.role==='cg')" :key="cg.userId">
+        <option :value="cg.userId" x-text="cg.fullName"></option>
+      </template>
+    </select>
+  </div>
+  <div class="flex gap-2 items-end">
+    <button @click="applyFilter()" class="btn btn-primary flex-1">🔍 กรอง</button>
+    <button @click="resetFilter()" class="btn btn-secondary">↺</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- ── LOADING SKELETON ──────────────────────────────────── -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div x-show="dashboardLoading">
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
+    <template x-for="i in 8"><div class="skeleton skeleton-card"></div></template>
+  </div>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <template x-for="i in 4"><div class="skeleton skeleton-chart"></div></template>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- ── ERROR STATE ──────────────────────────────────────── -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div x-show="!dashboardLoading && dashboardError" class="card text-center py-12">
+  <div class="text-5xl mb-3">⚠️</div>
+  <h3 class="font-bold text-red-700">ไม่สามารถโหลดข้อมูลได้</h3>
+  <p class="text-sm text-slate-500 mt-2" x-text="dashboardError"></p>
+  <button @click="loadDashboard()" class="btn btn-primary mt-4">ลองอีกครั้ง</button>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- ── DASHBOARD CONTENT ─────────────────────────────────── -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div x-show="!dashboardLoading && !dashboardError && dashboard">
+
+  <!-- ── 8 Stat Cards ─────────────────────────────────────── -->
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
+    <!-- 1. All Cases -->
+    <div class="stat-card stat-blue">
+      <div class="stat-icon">👥</div>
+      <div>
+        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.totalCases)"></div>
+        <div class="stat-label">เคสทั้งหมด</div>
+      </div>
+    </div>
+
+    <!-- 2. Elderly with Dependency -->
+    <div class="stat-card stat-orange">
+      <div class="stat-icon">👴</div>
+      <div>
+        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.elderlyDependent)"></div>
+        <div class="stat-label">ผู้สูงอายุพึ่งพิง</div>
+        <div class="stat-sub">อายุ ≥ 60 ปี · ADL ≤ 11</div>
+      </div>
+    </div>
+
+    <!-- 3. Other Dependents -->
+    <div class="stat-card stat-purple">
+      <div class="stat-icon">🧑‍🦽</div>
+      <div>
+        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.otherDependent)"></div>
+        <div class="stat-label">ผู้พึ่งพิงรายอื่น</div>
+        <div class="stat-sub">อายุ &lt; 60 ปี · ADL ≤ 11</div>
+      </div>
+    </div>
+
+    <!-- 4. Visits This Month -->
+    <div class="stat-card stat-green">
+      <div class="stat-icon">🏠</div>
+      <div>
+        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.visitsThisMonth)"></div>
+        <div class="stat-label">เยี่ยมเดือนนี้</div>
+      </div>
+    </div>
+
+    <!-- 5. Nearing Visit -->
+    <div class="stat-card stat-yellow">
+      <div class="stat-icon">⏰</div>
+      <div>
+        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.nearingVisitCount)"></div>
+        <div class="stat-label">ใกล้ครบกำหนด</div>
+        <div class="stat-sub">ภายใน 7 วัน</div>
+      </div>
+    </div>
+
+    <!-- 6. Overdue -->
+    <div class="stat-card stat-red">
+      <div class="stat-icon">⚠️</div>
+      <div>
+        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.overdueCount)"></div>
+        <div class="stat-label">เลยกำหนดเยี่ยม</div>
+      </div>
+    </div>
+
+    <!-- 7. High-Risk Mental Health -->
+    <div class="stat-card stat-pink">
+      <div class="stat-icon">🧠</div>
+      <div>
+        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.highRiskMental)"></div>
+        <div class="stat-label">สุขภาพจิตเสี่ยงสูง</div>
+      </div>
+    </div>
+
+    <!-- 8. Palliative Care -->
+    <div class="stat-card stat-slate">
+      <div class="stat-icon">🕊️</div>
+      <div>
+        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.palliativeCount)"></div>
+        <div class="stat-label">Palliative Care</div>
+        <div class="stat-sub">PPS ≤ 30%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- ── CHARTS / SUMMARY ──────────────────────────────────── -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+    <!-- (1) จำนวนเคสตามหมู่บ้าน -->
+    <div class="card">
+      <div class="section-title">🏘️ จำนวนเคสตามหมู่บ้าน</div>
+      <div x-show="!dashboard.charts.byVillage.length" class="empty-state">
+        <div class="icon">📭</div>
+        <p>ไม่มีข้อมูล</p>
+      </div>
+      <div x-show="dashboard.charts.byVillage.length" class="space-y-2.5 max-h-72 overflow-y-auto pr-2">
+        <template x-for="v in dashboard.charts.byVillage" :key="v.name">
+          <div class="progress-row">
+            <div class="progress-label" x-text="v.name"></div>
+            <div class="progress-track">
+              <div class="progress-fill blue"
+                   :style="`width: ${(v.count / maxValue(dashboard.charts.byVillage, 'count')) * 100}%`"></div>
+            </div>
+            <div class="progress-value" x-text="v.count"></div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- (2) จำนวนเคสตาม ADL/TAI Group -->
+    <div class="card">
+      <div class="section-title">🎯 จำนวนเคสตาม TAI Group (ADL)</div>
+      <div class="space-y-2.5">
+        <template x-for="g in dashboard.charts.byTaiGroup" :key="g.group">
+          <div class="progress-row">
+            <div class="progress-label" x-text="g.group"></div>
+            <div class="progress-track">
+              <div class="progress-fill"
+                   :class="g.group.includes('1')?'green':g.group.includes('2')?'yellow':g.group.includes('ไม่ระบุ')?'gray':'red'"
+                   :style="`width: ${(g.count / maxValue(dashboard.charts.byTaiGroup, 'count')) * 100}%`"></div>
+            </div>
+            <div class="progress-value" x-text="g.count"></div>
+          </div>
+        </template>
+      </div>
+      <div class="divider"></div>
+      <div class="grid grid-cols-4 gap-1.5 text-center">
+        <div class="bg-accent-50 rounded-lg py-2">
+          <div class="text-base font-bold text-accent-700"
+               x-text="dashboard.charts.byTaiGroup.find(g=>g.group.includes('1'))?.count||0"></div>
+          <div class="text-[10px] text-slate-500">ติดสังคม</div>
+        </div>
+        <div class="bg-yellow-50 rounded-lg py-2">
+          <div class="text-base font-bold text-yellow-700"
+               x-text="dashboard.charts.byTaiGroup.find(g=>g.group.includes('2'))?.count||0"></div>
+          <div class="text-[10px] text-slate-500">ติดบ้าน</div>
+        </div>
+        <div class="bg-red-50 rounded-lg py-2">
+          <div class="text-base font-bold text-red-700"
+               x-text="dashboard.charts.byTaiGroup.find(g=>g.group.includes('3'))?.count||0"></div>
+          <div class="text-[10px] text-slate-500">ติดเตียง</div>
+        </div>
+        <div class="bg-purple-50 rounded-lg py-2">
+          <div class="text-base font-bold text-purple-700"
+               x-text="dashboard.charts.byTaiGroup.find(g=>g.group.includes('4'))?.count||0"></div>
+          <div class="text-[10px] text-slate-500">+สมองเสื่อม</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- (3) แนวโน้มการเยี่ยมรายเดือน -->
+    <div class="card lg:col-span-2">
+      <div class="section-title">📈 แนวโน้มการเยี่ยมบ้าน 12 เดือนล่าสุด</div>
+      <div class="chart-bar-wrap scroll-x">
+        <template x-for="m in dashboard.charts.monthlyTrend" :key="m.month">
+          <div class="flex flex-col items-center min-w-[40px] flex-1">
+            <div class="chart-bar w-full" :style="`height: ${barHeight(m.count, maxValue(dashboard.charts.monthlyTrend, 'count'))}`">
+              <div class="chart-bar-value" x-show="m.count > 0" x-text="m.count"></div>
+            </div>
+            <div class="chart-bar-label" x-text="formatMonth(m.month)"></div>
+          </div>
+        </template>
+      </div>
+      <p class="text-xs text-slate-400 mt-2 text-center">
+        ยอดรวม
+        <span class="font-bold text-primary-700"
+              x-text="formatNumber(dashboard.charts.monthlyTrend.reduce((s,m)=>s+m.count,0))"></span>
+        ครั้งเยี่ยม
+      </p>
+    </div>
+
+    <!-- (4) สถานะแผนการดูแล -->
+    <div class="card lg:col-span-2">
+      <div class="section-title">📋 สถานะแผนการดูแล (Care Plans)</div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <template x-for="ps in dashboard.charts.planStatus" :key="ps.status">
+          <div class="text-center p-4 rounded-xl"
+               :class="ps.status==='active'?'bg-accent-50':ps.status==='completed'?'bg-primary-50':ps.status==='cancelled'?'bg-red-50':'bg-slate-50'">
+            <div class="text-2xl font-bold"
+                 :class="ps.status==='active'?'text-accent-700':ps.status==='completed'?'text-primary-700':ps.status==='cancelled'?'text-red-700':'text-slate-600'"
+                 x-text="formatNumber(ps.count)"></div>
+            <div class="text-xs text-slate-600 mt-1" x-text="statusLabel(ps.status)"></div>
+            <span class="badge mt-1.5 inline-block" :class="'badge-' + statusColor(ps.status)" x-text="ps.status"></span>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Footer ── -->
+  <div class="text-center mt-8 mb-4 text-xs text-slate-400">
+    👤 <span x-text="dashboard.user?.fullName"></span> · <span x-text="roleLabel(dashboard.user?.role)"></span>
+    · LTC Care Report v<span x-text="appConfig.APP_VERSION || ''"></span>
+  </div>
+</div>

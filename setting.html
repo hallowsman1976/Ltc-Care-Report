@@ -1,0 +1,273 @@
+<!-- ============================================================
+     setting.html — System Settings (admin) + Notifications
+     ============================================================ -->
+<div x-data="settingView()" x-init="init()">
+
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h1 class="text-xl sm:text-2xl font-bold text-slate-800">⚙️ การตั้งค่าระบบ</h1>
+      <p class="text-xs text-slate-500 mt-0.5">เฉพาะผู้ดูแลระบบ (admin)</p>
+    </div>
+  </div>
+
+  <!-- Not admin -->
+  <div x-show="$root.user?.role !== 'admin'" class="card text-center py-12">
+    <div class="text-5xl mb-3">🔒</div>
+    <h3 class="font-bold text-slate-700">เฉพาะผู้ดูแลระบบ</h3>
+    <p class="text-sm text-slate-500 mt-2">ท่านไม่มีสิทธิ์เข้าถึงหน้านี้</p>
+  </div>
+
+  <div x-show="$root.user?.role === 'admin'">
+    <!-- Tabs -->
+    <div class="flex gap-2 mb-4 border-b border-slate-200">
+      <button @click="tab='general'" :class="tab==='general'?'border-primary-600 text-primary-700':'border-transparent text-slate-500'"
+              class="px-4 py-2 border-b-2 font-semibold text-sm">🏢 ทั่วไป</button>
+      <button @click="tab='line'" :class="tab==='line'?'border-primary-600 text-primary-700':'border-transparent text-slate-500'"
+              class="px-4 py-2 border-b-2 font-semibold text-sm">💬 LINE</button>
+      <button @click="tab='notify'; loadNotifications()" :class="tab==='notify'?'border-primary-600 text-primary-700':'border-transparent text-slate-500'"
+              class="px-4 py-2 border-b-2 font-semibold text-sm">🔔 แจ้งเตือน</button>
+    </div>
+
+    <!-- Loading -->
+    <div x-show="loading"><div class="skeleton h-64 rounded-2xl"></div></div>
+
+    <!-- ── TAB: General ── -->
+    <div x-show="!loading && tab==='general'" class="card">
+      <div class="section-title">🏢 ข้อมูลองค์กรและระบบ</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="form-label">ชื่อแอปพลิเคชัน (APP_NAME)</label>
+          <input type="text" x-model="s.APP_NAME" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">ชื่อองค์กร (ORG_NAME)</label>
+          <input type="text" x-model="s.ORG_NAME" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">ตำบล (SUBDISTRICT_NAME)</label>
+          <input type="text" x-model="s.SUBDISTRICT_NAME" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">อำเภอ (DISTRICT_NAME)</label>
+          <input type="text" x-model="s.DISTRICT_NAME" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">งบ LTC ต่อราย/ปี (บาท)</label>
+          <input type="number" x-model="s.LTC_BUDGET_PER_PERSON_YEAR" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">URL ของ Web App (WEBAPP_URL)</label>
+          <input type="text" x-model="s.WEBAPP_URL" class="form-input" placeholder="https://script.google.com/...">
+        </div>
+        <div class="sm:col-span-2">
+          <label class="form-label">Drive Folder ID เก็บรูปภาพ (DRIVE_FOLDER_LTC_PHOTO)</label>
+          <input type="text" x-model="s.DRIVE_FOLDER_LTC_PHOTO" class="form-input font-mono text-sm"
+                 placeholder="เว้นว่าง = ระบบสร้างให้อัตโนมัติ">
+          <p class="text-xs text-slate-400 mt-1">หากเว้นว่าง ระบบจะสร้างโฟลเดอร์ใหม่อัตโนมัติเมื่ออัปโหลดรูปครั้งแรก</p>
+        </div>
+      </div>
+      <div class="mt-4 pt-4 border-t">
+        <button @click="save()" class="btn btn-primary" :disabled="saving">
+          <span x-text="saving?'⏳ บันทึก...':'💾 บันทึกการตั้งค่า'"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ── TAB: LINE ── -->
+    <div x-show="!loading && tab==='line'" class="card">
+      <div class="section-title">💬 LINE Messaging API</div>
+      <div class="bg-blue-50 rounded-xl p-3 mb-4 text-xs text-blue-800">
+        ใช้ LINE Official Account (Messaging API) — สร้างที่
+        <a href="https://developers.line.biz/" target="_blank" class="underline font-semibold">developers.line.biz</a>
+        คัดลอก Channel Access Token และ Group/User ID ปลายทาง
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="form-label">Channel Access Token</label>
+          <div class="flex gap-2">
+            <input :type="showToken?'text':'password'" x-model="s.LINE_CHANNEL_ACCESS_TOKEN"
+                   class="form-input font-mono text-sm" placeholder="(ซ่อนไว้เพื่อความปลอดภัย)">
+            <button type="button" @click="showToken=!showToken" class="btn btn-secondary btn-sm flex-shrink-0">
+              <span x-text="showToken?'🙈':'👁️'"></span>
+            </button>
+          </div>
+          <p class="text-xs text-amber-600 mt-1" x-show="masked.LINE_CHANNEL_ACCESS_TOKEN">
+            🔒 Token ถูกซ่อนบางส่วน — แก้ไขเฉพาะเมื่อต้องการเปลี่ยน
+          </p>
+        </div>
+        <div>
+          <label class="form-label">LINE Group / User ID ปลายทาง</label>
+          <input type="text" x-model="s.LINE_GROUP_ID" class="form-input font-mono text-sm" placeholder="Cxxxxxxxx / Uxxxxxxxx">
+        </div>
+      </div>
+      <div class="mt-4 pt-4 border-t flex flex-wrap gap-2">
+        <button @click="save()" class="btn btn-primary" :disabled="saving">💾 บันทึก</button>
+        <button @click="testLine()" class="btn btn-outline" :disabled="testing">
+          <span x-text="testing?'⏳...':'📤 ทดสอบส่งข้อความ'"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ── TAB: Notifications ── -->
+    <div x-show="!loading && tab==='notify'">
+      <!-- Manual triggers -->
+      <div class="card mb-4">
+        <div class="section-title">🔔 ส่งแจ้งเตือนด้วยตนเอง</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <button @click="runNotify('api_notifyUpcomingVisits')" class="btn btn-outline justify-start" :disabled="notifying">📅 นัดใกล้ครบกำหนด</button>
+          <button @click="runNotify('api_notifyOverdueVisits')" class="btn btn-outline justify-start" :disabled="notifying">⚠️ เคสเลยกำหนด</button>
+          <button @click="runNotify('api_notifyHighRiskMentalHealth')" class="btn btn-outline justify-start" :disabled="notifying">🚨 สุขภาพจิตเสี่ยงสูง</button>
+          <button @click="runNotify('api_notifyAbnormalVitalSigns')" class="btn btn-outline justify-start" :disabled="notifying">🩺 สัญญาณชีพผิดปกติ</button>
+          <button @click="runNotify('api_notifyPPSDecline')" class="btn btn-outline justify-start" :disabled="notifying">📉 PPS ลดลง</button>
+        </div>
+        <div class="mt-3 flex gap-2">
+          <input type="text" x-model="customMsg" class="form-input" placeholder="พิมพ์ข้อความส่งเอง...">
+          <button @click="sendCustom()" class="btn btn-success flex-shrink-0" :disabled="!customMsg || notifying">📤 ส่ง</button>
+        </div>
+      </div>
+
+      <!-- History -->
+      <div class="card p-0 overflow-hidden">
+        <div class="px-4 py-3 border-b flex items-center justify-between">
+          <span class="font-bold text-sm">ประวัติการแจ้งเตือน</span>
+          <button @click="loadNotifications()" class="btn btn-secondary btn-sm">🔄</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead class="bg-slate-50"><tr>
+              <th class="px-3 py-2 text-left">เวลา</th><th class="px-3 py-2 text-left">ประเภท</th>
+              <th class="px-3 py-2 text-left">ข้อความ</th><th class="px-3 py-2 text-center">สถานะ</th>
+              <th class="px-3 py-2 text-center">จัดการ</th>
+            </tr></thead>
+            <tbody class="divide-y divide-slate-100">
+              <template x-for="n in notifications" :key="n.NotificationID">
+                <tr>
+                  <td class="px-3 py-2 whitespace-nowrap text-slate-500" x-text="fmtDateTime(n.CreatedAt)"></td>
+                  <td class="px-3 py-2"><span class="badge badge-blue" x-text="n.NotificationType"></span></td>
+                  <td class="px-3 py-2 max-w-xs truncate" x-text="n.Message"></td>
+                  <td class="px-3 py-2 text-center">
+                    <span class="badge" :class="n.Status==='sent'?'badge-green':'badge-red'"
+                          x-text="n.Status==='sent'?'สำเร็จ':'ล้มเหลว'"></span>
+                  </td>
+                  <td class="px-3 py-2 text-center">
+                    <button @click="resend(n.NotificationID)" class="btn btn-secondary btn-sm">↻ ส่งซ้ำ</button>
+                  </td>
+                </tr>
+              </template>
+              <tr x-show="!notifications.length"><td colspan="5" class="text-center py-6 text-slate-400">ยังไม่มีประวัติ</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function settingView() {
+  return {
+    tab: 'general',
+    s: {},
+    masked: {},
+    loading: true,
+    saving: false,
+    testing: false,
+    notifying: false,
+    showToken: false,
+    notifications: [],
+    customMsg: '',
+
+    async init() {
+      if (this.$root.user?.role !== 'admin') { this.loading = false; return; }
+      await this.load();
+    },
+
+    async load() {
+      this.loading = true;
+      try {
+        const r = await rpc('api_getSettings', this.$root.token);
+        if (!r.success) { showError(r.message); return; }
+        this.s = r.data.settings || {};
+        this.masked = r.data.masked || {};
+      } catch (e) {
+        showError(e.message || 'โหลดการตั้งค่าไม่สำเร็จ');
+      } finally { this.loading = false; }
+    },
+
+    async save() {
+      const ok = await showConfirm('บันทึกการตั้งค่า?', 'การเปลี่ยนแปลงจะมีผลทันที');
+      if (!ok) return;
+      this.saving = true;
+      try {
+        const r = await rpc('api_saveSettings', this.$root.token, this.s);
+        if (!r.success) { showError(r.message); return; }
+        showSuccess(r.message);
+        // โหลดใหม่เพื่อ mask token อีกครั้ง
+        await this.load();
+      } catch (e) {
+        showError(e.message || 'บันทึกไม่สำเร็จ');
+      } finally { this.saving = false; }
+    },
+
+    async testLine() {
+      this.testing = true;
+      try {
+        const r = await rpc('api_sendLineAlert', this.$root.token,
+          '🔔 ทดสอบการแจ้งเตือนจากระบบ ' + (this.s.APP_NAME||'LTC Care Report'), '');
+        if (r.success) showSuccess('ส่งข้อความทดสอบสำเร็จ');
+        else showError(r.message);
+      } catch (e) { showError(e.message); }
+      finally { this.testing = false; }
+    },
+
+    async runNotify(fnName) {
+      const ok = await showConfirm('ส่งแจ้งเตือน?', 'ระบบจะส่งข้อความสรุปไปยัง LINE');
+      if (!ok) return;
+      this.notifying = true;
+      try {
+        const r = await rpc(fnName, this.$root.token);
+        if (r.success) {
+          Swal.fire({ icon:'success', title:'ส่งแล้ว', text: r.message });
+          this.loadNotifications();
+        } else showError(r.message);
+      } catch (e) { showError(e.message); }
+      finally { this.notifying = false; }
+    },
+
+    async sendCustom() {
+      if (!this.customMsg) return;
+      this.notifying = true;
+      try {
+        const r = await rpc('api_sendLineAlert', this.$root.token, this.customMsg, '');
+        if (r.success) { showSuccess('ส่งสำเร็จ'); this.customMsg=''; this.loadNotifications(); }
+        else showError(r.message);
+      } catch (e) { showError(e.message); }
+      finally { this.notifying = false; }
+    },
+
+    async loadNotifications() {
+      try {
+        const r = await rpc('api_getNotifications', this.$root.token, 100);
+        if (r.success) this.notifications = r.data || [];
+      } catch (e) {}
+    },
+
+    async resend(id) {
+      const ok = await showConfirm('ส่งซ้ำ?', 'ระบบจะส่งข้อความนี้อีกครั้ง');
+      if (!ok) return;
+      try {
+        const r = await rpc('api_resendNotification', this.$root.token, id);
+        if (r.success) { showSuccess('ส่งซ้ำสำเร็จ'); this.loadNotifications(); }
+        else showError(r.message);
+      } catch (e) { showError(e.message); }
+    },
+
+    fmtDateTime(iso) {
+      if (!iso) return '-';
+      const d = new Date(iso);
+      if (isNaN(d)) return iso;
+      return d.toLocaleString('th-TH', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+    }
+  };
+}
+</script>

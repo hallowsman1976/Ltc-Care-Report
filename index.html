@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="theme-color" content="#1e40af">
+  <title>LTC Care Report — ระบบรายงานการดูแลผู้สูงอายุ</title>
+
+  <!-- Fonts: Noto Sans Thai -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Noto Sans Thai', 'system-ui', 'sans-serif'] },
+          colors: {
+            primary: {
+              50:'#eff6ff', 100:'#dbeafe', 200:'#bfdbfe', 300:'#93c5fd',
+              400:'#60a5fa', 500:'#3b82f6', 600:'#2563eb', 700:'#1d4ed8',
+              800:'#1e40af', 900:'#1e3a8a'
+            },
+            accent: {
+              50:'#f0fdf4', 100:'#dcfce7', 200:'#bbf7d0', 300:'#86efac',
+              400:'#4ade80', 500:'#22c55e', 600:'#16a34a', 700:'#15803d'
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- Leaflet (Map) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+
+  <?!= include('style') ?>
+</head>
+
+<body class="bg-slate-50 text-slate-800 font-sans antialiased" x-data="app()" x-init="init()" x-cloak>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- ── 1. LOGIN PAGE ─────────────────────────────────────── -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <div x-show="!user" class="min-h-screen flex items-center justify-center px-4 py-8 login-bg">
+    <div class="w-full max-w-md">
+      <!-- Logo -->
+      <div class="text-center mb-8">
+        <div class="w-20 h-20 bg-white rounded-3xl shadow-xl flex items-center justify-center mx-auto mb-4">
+          <span class="text-4xl">🏥</span>
+        </div>
+        <h1 class="text-2xl font-bold text-white drop-shadow">LTC Care Report</h1>
+        <p class="text-primary-100 text-sm mt-1">ระบบรายงานการดูแลผู้สูงอายุและผู้พึ่งพิง</p>
+        <p class="text-primary-200 text-xs mt-0.5" x-text="appConfig.ORG_NAME || ''"></p>
+      </div>
+
+      <!-- Login Form -->
+      <div class="bg-white rounded-2xl shadow-2xl p-6 sm:p-8">
+        <h2 class="text-lg font-bold text-slate-800 mb-1">เข้าสู่ระบบ</h2>
+        <p class="text-xs text-slate-500 mb-6">กรอกชื่อผู้ใช้และรหัสผ่านของท่าน</p>
+
+        <form @submit.prevent="doLogin()" class="space-y-4">
+          <div>
+            <label class="form-label">ชื่อผู้ใช้</label>
+            <input type="text" x-model="loginForm.username" class="form-input"
+                   placeholder="username" autocomplete="username" autocapitalize="off"
+                   :disabled="loginLoading" required>
+          </div>
+
+          <div>
+            <label class="form-label">รหัสผ่าน</label>
+            <div class="relative">
+              <input :type="showPass ? 'text' : 'password'"
+                     x-model="loginForm.password" class="form-input pr-12"
+                     placeholder="••••••••" autocomplete="current-password"
+                     :disabled="loginLoading" required>
+              <button type="button" @click="showPass = !showPass"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-lg">
+                <span x-text="showPass ? '🙈' : '👁️'"></span>
+              </button>
+            </div>
+          </div>
+
+          <div x-show="loginError"
+               class="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl flex gap-2 items-start">
+            <span>⚠️</span>
+            <span x-text="loginError"></span>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg w-full"
+                  :disabled="loginLoading">
+            <svg x-show="loginLoading" class="animate-spin w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+            </svg>
+            <span x-text="loginLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'"></span>
+          </button>
+        </form>
+
+        <p class="text-center text-xs text-slate-400 mt-6 leading-relaxed">
+          สำหรับ อสม. / ผู้ดูแล (CG) / Care Manager (CM)<br>
+          ติดต่อผู้ดูแลระบบเพื่อขอบัญชีผู้ใช้
+        </p>
+      </div>
+
+      <p class="text-center text-xs text-primary-100 mt-4">
+        NHSO LTC Benefit Package · v<span x-text="appConfig.APP_VERSION || ''"></span>
+      </p>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- ── 2. APP LAYOUT (After Login) ───────────────────────── -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <div x-show="user" class="min-h-screen flex flex-col md:flex-row">
+
+    <!-- ── Sidebar (Desktop) ── -->
+    <aside class="hidden md:flex md:flex-col md:w-60 md:fixed md:inset-y-0 bg-primary-800 text-white shadow-xl z-30">
+      <!-- Brand -->
+      <div class="px-5 py-5 border-b border-primary-700/50">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center text-xl">🏥</div>
+          <div>
+            <div class="font-bold text-sm leading-tight">LTC Care Report</div>
+            <div class="text-xs text-primary-200" x-text="appConfig.ORG_NAME || 'NHSO'"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Menu -->
+      <nav class="flex-1 px-3 py-4 overflow-y-auto space-y-1">
+        <template x-for="item in navItems" :key="item.page">
+          <button x-show="canAccess(item.roles)"
+                  @click="showPage(item.page)"
+                  :class="page === item.page ? 'bg-white/15 text-white' : 'text-primary-100 hover:bg-white/10'"
+                  class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition">
+            <span class="text-lg" x-text="item.icon"></span>
+            <span x-text="item.label"></span>
+          </button>
+        </template>
+      </nav>
+
+      <!-- User -->
+      <div class="px-3 py-3 border-t border-primary-700/50">
+        <div class="flex items-center gap-3 px-2 py-2">
+          <div class="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center font-semibold text-sm"
+               x-text="(user?.fullName||'?').substring(0,1)"></div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-semibold truncate" x-text="user?.fullName"></div>
+            <div class="text-xs text-primary-200" x-text="roleLabel(user?.role)"></div>
+          </div>
+        </div>
+        <button @click="logout()" class="w-full mt-2 px-3 py-2 text-sm rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-100 flex items-center gap-2 justify-center">
+          <span>🚪</span><span>ออกจากระบบ</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ── Top Bar (Mobile) ── -->
+    <header class="md:hidden sticky top-0 z-20 bg-primary-800 text-white px-4 py-3 flex items-center justify-between shadow">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">🏥</span>
+        <div>
+          <div class="font-bold text-sm">LTC Care Report</div>
+          <div class="text-xs text-primary-200" x-text="pageTitle()"></div>
+        </div>
+      </div>
+      <button @click="logout()" class="px-3 py-1.5 rounded-lg bg-red-500/20 text-xs">ออก</button>
+    </header>
+
+    <!-- ── Main Content ── -->
+    <main class="flex-1 md:ml-60 pb-20 md:pb-6" id="main">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+
+        <!-- Page: Dashboard -->
+        <div x-show="page === 'dashboard'">
+          <?!= include('dashboard') ?>
+        </div>
+
+        <!-- Page: Patients (Case Form) -->
+        <div x-show="page === 'patients'">
+          <?!= include('case-form') ?>
+        </div>
+
+        <!-- Page: Visits -->
+        <div x-show="page === 'visits'">
+          <?!= include('visit-form') ?>
+        </div>
+
+        <!-- Page: Assessment -->
+        <div x-show="page === 'assessment'">
+          <?!= include('assessment-form') ?>
+        </div>
+
+        <!-- Page: Map -->
+        <div x-show="page === 'map'">
+          <?!= include('map') ?>
+        </div>
+
+        <!-- Page: Reports -->
+        <div x-show="page === 'reports'">
+          <?!= include('report') ?>
+        </div>
+
+        <!-- Page: Settings -->
+        <div x-show="page === 'settings'">
+          <?!= include('setting') ?>
+        </div>
+
+        <!-- Page: อื่นๆ (placeholder) -->
+        <div x-show="!['dashboard','patients','visits','assessment','map','reports','settings'].includes(page)" class="card text-center py-16">
+          <div class="text-5xl mb-3">🚧</div>
+          <h3 class="font-bold text-slate-700" x-text="pageTitle()"></h3>
+          <p class="text-sm text-slate-500 mt-2">หน้านี้กำลังพัฒนาในเฟสถัดไป</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- ── Bottom Navigation (Mobile) ── -->
+    <nav class="md:hidden fixed bottom-0 inset-x-0 z-20 bg-white border-t border-slate-200 shadow-lg">
+      <div class="grid grid-cols-5">
+        <template x-for="item in navItems.filter(n => n.bottom)" :key="item.page">
+          <button x-show="canAccess(item.roles)"
+                  @click="showPage(item.page)"
+                  :class="page === item.page ? 'text-primary-700' : 'text-slate-400'"
+                  class="flex flex-col items-center py-2 text-xs">
+            <span class="text-xl mb-0.5" x-text="item.icon"></span>
+            <span x-text="item.shortLabel"></span>
+          </button>
+        </template>
+      </div>
+    </nav>
+  </div>
+
+  <!-- ── Global Loading Overlay ── -->
+  <div x-show="loading"
+       class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div class="bg-white rounded-2xl px-6 py-5 shadow-2xl flex items-center gap-3">
+      <svg class="animate-spin w-6 h-6 text-primary-600" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+      </svg>
+      <span class="text-sm font-medium text-slate-700" x-text="loadingText"></span>
+    </div>
+  </div>
+
+  <?!= include('script') ?>
+</body>
+</html>
