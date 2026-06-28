@@ -4,12 +4,35 @@
    ============================================================ */
 
 /**
- * rpc(name, ...args) — Promise wrapper สำหรับ google.script.run
- * จัดการ error เป็น Promise rejection
+ * rpc(name, ...args) — เรียก backend แบบ dual-mode
+ *  • ถ้า window.LTC_API_URL ถูกตั้ง (host บน GitHub Pages) → เรียก GAS REST API ผ่าน fetch
+ *  • ถ้าไม่ตั้ง (host ภายใน GAS เอง) → ใช้ google.script.run เหมือนเดิม
+ * คืน Promise ที่ resolve เป็น { success, data, message }
  */
 function rpc(name, ...args) {
+  // ── Mode A: REST (GitHub Pages / external) ──
+  if (typeof window !== 'undefined' && window.LTC_API_URL) {
+    return fetch(window.LTC_API_URL, {
+      method: 'POST',
+      // text/plain = simple request → เลี่ยง CORS preflight ที่ GAS ตอบไม่ได้
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'invoke',
+        fn: name,
+        args: args,
+        apiKey: window.LTC_API_KEY || undefined
+      })
+    })
+    .then(res => {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .catch(err => ({ success: false, data: null, message: 'เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ: ' + (err && err.message ? err.message : err) }));
+  }
+
+  // ── Mode B: google.script.run (hosted inside GAS) ──
   return new Promise((resolve, reject) => {
-    if (!google || !google.script || !google.script.run) {
+    if (typeof google === 'undefined' || !google.script || !google.script.run) {
       reject(new Error('Google Apps Script ไม่พร้อมใช้งาน'));
       return;
     }
@@ -264,30 +287,26 @@ function app() {
 // ============================================================
 window.addEventListener('error', function(e) {
   try {
-    if (google && google.script && google.script.run) {
-      google.script.run.api_logClientError({
-        type: 'error',
-        message: String(e.message || ''),
-        source: String(e.filename || ''),
-        line: e.lineno || 0, col: e.colno || 0,
-        stack: e.error && e.error.stack ? String(e.error.stack).substring(0, 1000) : '',
-        userAgent: String(navigator.userAgent || '').substring(0, 200),
-        url: location.href
-      });
-    }
+    rpc('api_logClientError', {
+      type: 'error',
+      message: String(e.message || ''),
+      source: String(e.filename || ''),
+      line: e.lineno || 0, col: e.colno || 0,
+      stack: e.error && e.error.stack ? String(e.error.stack).substring(0, 1000) : '',
+      userAgent: String(navigator.userAgent || '').substring(0, 200),
+      url: location.href
+    }).catch(function(){});
   } catch (err) {}
 });
 
 window.addEventListener('unhandledrejection', function(e) {
   try {
-    if (google && google.script && google.script.run) {
-      google.script.run.api_logClientError({
-        type: 'unhandledrejection',
-        message: String((e.reason && e.reason.message) || e.reason || ''),
-        stack: (e.reason && e.reason.stack) ? String(e.reason.stack).substring(0, 1000) : '',
-        url: location.href
-      });
-    }
+    rpc('api_logClientError', {
+      type: 'unhandledrejection',
+      message: String((e.reason && e.reason.message) || e.reason || ''),
+      stack: (e.reason && e.reason.stack) ? String(e.reason.stack).substring(0, 1000) : '',
+      url: location.href
+    }).catch(function(){});
   } catch (err) {}
 });
 </script>
