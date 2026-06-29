@@ -26,6 +26,8 @@
               class="px-4 py-2 border-b-2 font-semibold text-sm">💬 LINE</button>
       <button @click="tab='notify'; loadNotifications()" :class="tab==='notify'?'border-primary-600 text-primary-700':'border-transparent text-slate-500'"
               class="px-4 py-2 border-b-2 font-semibold text-sm">🔔 แจ้งเตือน</button>
+      <button @click="tab='users'; loadUsers()" :class="tab==='users'?'border-primary-600 text-primary-700':'border-transparent text-slate-500'"
+              class="px-4 py-2 border-b-2 font-semibold text-sm">👥 ผู้ใช้</button>
     </div>
 
     <!-- Loading -->
@@ -160,6 +162,117 @@
         </div>
       </div>
     </div>
+
+    <!-- ── TAB: Users ── -->
+    <div x-show="!loading && tab==='users'">
+      <div class="card mb-4">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div class="section-title mb-0">👥 จัดการผู้ใช้ระบบ
+            <span class="text-xs font-normal text-slate-400" x-text="'('+users.length+' คน)'"></span>
+          </div>
+          <div class="flex gap-2">
+            <button @click="loadUsers()" class="btn btn-secondary btn-sm">🔄</button>
+            <button @click="openAddUser('cg')" class="btn btn-primary btn-sm">+ เพิ่มผู้ดูแล (CG)</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card p-0 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-slate-600"><tr>
+              <th class="text-left px-4 py-3">ชื่อ-นามสกุล</th>
+              <th class="text-left px-4 py-3">Username</th>
+              <th class="text-center px-4 py-3">บทบาท</th>
+              <th class="text-left px-4 py-3">โทรศัพท์</th>
+              <th class="text-center px-4 py-3">สถานะ</th>
+              <th class="text-center px-4 py-3">จัดการ</th>
+            </tr></thead>
+            <tbody class="divide-y divide-slate-100">
+              <template x-for="u in users" :key="u.UserID">
+                <tr class="hover:bg-slate-50">
+                  <td class="px-4 py-3 font-medium">
+                    <span x-text="u.FullName"></span>
+                    <span x-show="u.NickName" class="text-xs text-slate-400" x-text="' ('+u.NickName+')'"></span>
+                  </td>
+                  <td class="px-4 py-3 font-mono text-xs" x-text="u.Username"></td>
+                  <td class="px-4 py-3 text-center"><span class="badge" :class="roleBadge(u.Role)" x-text="roleLabel(u.Role)"></span></td>
+                  <td class="px-4 py-3 text-xs" x-text="u.Phone||'-'"></td>
+                  <td class="px-4 py-3 text-center">
+                    <span class="badge" :class="u.IsActive?'badge-green':'badge-red'" x-text="u.IsActive?'ใช้งาน':'ปิด'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-center whitespace-nowrap">
+                    <button @click="openEditUser(u)" class="btn btn-outline btn-sm">✏️</button>
+                    <button @click="toggleActive(u)" class="btn btn-secondary btn-sm" x-text="u.IsActive?'🚫':'✓'"></button>
+                  </td>
+                </tr>
+              </template>
+              <tr x-show="!users.length"><td colspan="6" class="text-center py-6 text-slate-400">ยังไม่มีผู้ใช้</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── USER ADD/EDIT MODAL ── -->
+    <div x-show="showUserForm" x-cloak
+         class="fixed inset-0 bg-black/50 z-40 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
+         @click.self="showUserForm=false">
+      <div class="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-2xl max-h-[95vh] flex flex-col">
+        <div class="px-5 py-4 border-b flex items-center justify-between sticky top-0 bg-white rounded-t-2xl">
+          <h3 class="font-bold text-slate-800" x-text="uForm.UserID ? '✏️ แก้ไขผู้ใช้' : '➕ เพิ่มผู้ใช้ใหม่'"></h3>
+          <button @click="showUserForm=false" class="text-2xl text-slate-400 hover:text-slate-700">&times;</button>
+        </div>
+        <form @submit.prevent="saveUser()" class="overflow-y-auto p-5 flex-1 space-y-3">
+          <div>
+            <label class="form-label">ชื่อ-นามสกุล <span class="text-red-500">*</span></label>
+            <input type="text" x-model="uForm.fullName" class="form-input" required>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="form-label">ชื่อเล่น</label>
+              <input type="text" x-model="uForm.nickName" class="form-input">
+            </div>
+            <div>
+              <label class="form-label">บทบาท <span class="text-red-500">*</span></label>
+              <select x-model="uForm.role" class="form-input" required>
+                <option value="cg">ผู้ดูแล (CG)</option>
+                <option value="cm">Care Manager (CM)</option>
+                <option value="viewer">ผู้ดูข้อมูล</option>
+                <option value="admin">ผู้ดูแลระบบ</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="form-label">ชื่อผู้ใช้ (username) <span class="text-red-500">*</span></label>
+            <input type="text" x-model="uForm.username" class="form-input font-mono"
+                   :disabled="!!uForm.UserID" autocapitalize="off" placeholder="a-z 0-9 _ . (3–30 ตัว)">
+            <p x-show="uForm.UserID" class="text-xs text-slate-400 mt-1">เปลี่ยน username ไม่ได้</p>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="form-label">โทรศัพท์</label>
+              <input type="tel" x-model="uForm.phone" class="form-input">
+            </div>
+            <div>
+              <label class="form-label">อีเมล</label>
+              <input type="email" x-model="uForm.email" class="form-input">
+            </div>
+          </div>
+          <div>
+            <label class="form-label" x-text="uForm.UserID ? 'รหัสผ่านใหม่ (เว้นว่าง = ไม่เปลี่ยน)' : 'รหัสผ่าน *'"></label>
+            <input type="text" x-model="uForm.password" class="form-input font-mono"
+                   :required="!uForm.UserID" placeholder="อย่างน้อย 6 ตัวอักษร">
+          </div>
+          <div class="flex gap-2 justify-end pt-3 border-t">
+            <button type="button" @click="showUserForm=false" class="btn btn-secondary">ยกเลิก</button>
+            <button type="submit" class="btn btn-primary" :disabled="userSaving">
+              <span x-text="userSaving?'กำลังบันทึก...':'💾 บันทึก'"></span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -176,6 +289,7 @@ function settingView() {
     showToken: false,
     notifications: [],
     customMsg: '',
+    users: [], showUserForm: false, userSaving: false, uForm: {},
 
     _loaded: false,
 
@@ -278,6 +392,80 @@ function settingView() {
         if (r.success) { showSuccess('ส่งซ้ำสำเร็จ'); this.loadNotifications(); }
         else showError(r.message);
       } catch (e) { showError(e.message); }
+    },
+
+    // ── User management ──
+    blankUser() {
+      return { UserID:'', username:'', password:'', fullName:'', nickName:'', role:'cg', phone:'', email:'' };
+    },
+
+    async loadUsers() {
+      try {
+        const r = await rpc('api_getUsers', window.LTCApp.token);
+        if (r.success) this.users = r.data || [];
+        else showError(r.message);
+      } catch (e) { showError(e.message); }
+    },
+
+    openAddUser(role) {
+      this.uForm = this.blankUser();
+      if (role) this.uForm.role = role;
+      this.showUserForm = true;
+    },
+
+    openEditUser(u) {
+      this.uForm = {
+        UserID: u.UserID, username: u.Username, password: '',
+        fullName: u.FullName, nickName: u.NickName||'', role: u.Role,
+        phone: u.Phone||'', email: u.Email||''
+      };
+      this.showUserForm = true;
+    },
+
+    async saveUser() {
+      if (!this.uForm.fullName || !this.uForm.role) { showError('กรุณากรอกชื่อและบทบาท'); return; }
+      if (!this.uForm.UserID && (!this.uForm.username || !this.uForm.password)) {
+        showError('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน'); return;
+      }
+      this.userSaving = true;
+      try {
+        let r;
+        if (this.uForm.UserID) {
+          const data = {
+            fullName: this.uForm.fullName, nickName: this.uForm.nickName, role: this.uForm.role,
+            phone: this.uForm.phone, email: this.uForm.email
+          };
+          if (this.uForm.password) data.newPassword = this.uForm.password;
+          r = await rpc('api_updateUser', window.LTCApp.token, this.uForm.UserID, data);
+        } else {
+          r = await rpc('api_createUser', window.LTCApp.token, {
+            username: this.uForm.username, password: this.uForm.password, fullName: this.uForm.fullName,
+            nickName: this.uForm.nickName, role: this.uForm.role, phone: this.uForm.phone, email: this.uForm.email
+          });
+        }
+        if (!r.success) { showError(r.message); return; }
+        showSuccess(r.message);
+        this.showUserForm = false;
+        await this.loadUsers();
+      } catch (e) { showError(e.message); }
+      finally { this.userSaving = false; }
+    },
+
+    async toggleActive(u) {
+      const ok = await showConfirm(u.IsActive ? 'ปิดบัญชีนี้?' : 'เปิดบัญชีนี้?', u.FullName);
+      if (!ok) return;
+      try {
+        const r = await rpc('api_setUserActive', window.LTCApp.token, u.UserID, !u.IsActive);
+        if (r.success) { showSuccess(r.message); this.loadUsers(); }
+        else showError(r.message);
+      } catch (e) { showError(e.message); }
+    },
+
+    roleLabel(role) {
+      return ({ admin:'ผู้ดูแลระบบ', cm:'Care Manager', cg:'ผู้ดูแล (CG)', viewer:'ผู้ดูข้อมูล' })[role] || role;
+    },
+    roleBadge(role) {
+      return ({ admin:'badge-red', cm:'badge-blue', cg:'badge-green', viewer:'badge-gray' })[role] || 'badge-gray';
     },
 
     fmtDateTime(iso) {

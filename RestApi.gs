@@ -327,6 +327,8 @@ const INVOKE_ALLOW = new Set([
   'api_login', 'api_logout', 'api_getCurrentUser', 'api_changePassword',
   // Permission
   'api_checkPermission', 'api_getPermissionMatrix', 'api_getAuditLog',
+  // User management (admin)
+  'api_getUsers', 'api_createUser', 'api_updateUser', 'api_setUserActive',
   // Patient / Case
   'api_getPatients', 'api_getPatientById', 'api_savePatient', 'api_updatePatient',
   'api_deletePatient', 'api_searchPatients', 'api_getPatientTimeline', 'api_getDashboardData',
