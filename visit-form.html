@@ -138,18 +138,15 @@
       <div class="space-y-3">
         <div>
           <label class="form-label">อาการหลัก / ปัญหาที่พบ <span class="text-red-500">*</span></label>
-          <textarea x-model="form.MainProblem" rows="2" required class="form-input"
-                    placeholder="เช่น ปวดเข่าทั้งสองข้าง บวม ออกแรงไม่ได้"></textarea>
+          <select multiple x-ref="selSymptom" placeholder="เลือก/พิมพ์อาการ (เลือกได้หลายรายการ)"></select>
         </div>
         <div>
           <label class="form-label">การดูแลที่ให้</label>
-          <textarea x-model="form.CareProvided" rows="2" class="form-input"
-                    placeholder="เช่น วัดสัญญาณชีพ ทำแผล ทำกายภาพ"></textarea>
+          <select multiple x-ref="selCare" placeholder="เลือก/พิมพ์การดูแล (เลือกได้หลายรายการ)"></select>
         </div>
         <div>
           <label class="form-label">การให้สุขศึกษา</label>
-          <textarea x-model="form.HealthEducation" rows="2" class="form-input"
-                    placeholder="เช่น แนะนำเรื่องการรับประทานยา ดูแลแผล โภชนาการ"></textarea>
+          <select multiple x-ref="selEducation" placeholder="เลือก/พิมพ์สุขศึกษา (เลือกได้หลายรายการ)"></select>
         </div>
         <div>
           <label class="form-label">การมีส่วนร่วมของครอบครัว</label>
@@ -287,6 +284,7 @@
 function visitForm() {
   return {
     patients: [],
+    options: { symptoms: [], care: [], education: [] },
     patientSearch: '',
     filteredPatients: [],
     showDropdown: false,
@@ -321,6 +319,7 @@ function visitForm() {
         this.form.VisitorID = window.LTCApp.user?.userId || '';
         this.form.VisitorName = window.LTCApp.user?.fullName || window.LTCApp.user?.username || '';
         this.loadPatients();
+        this.loadOptions();
       };
       window.addEventListener('ltc-page', e => { if (e.detail === 'visits') load(); });
       if (window.LTCApp?.page === 'visits') load(); else this.loading = false;
@@ -338,6 +337,49 @@ function visitForm() {
       } catch (e) {
         showError(e.message || 'โหลดรายชื่อไม่สำเร็จ');
       } finally { this.loading = false; }
+    },
+
+    async loadOptions() {
+      if (!window.LTCApp?.token) return;
+      try {
+        const r = await rpc('api_getVisitOptions', window.LTCApp.token);
+        if (r.success) this.options = r.data || this.options;
+      } catch (e) { /* ใช้ค่าว่าง */ }
+      this.$nextTick(() => this.initVisitSelects());
+    },
+
+    /** สร้าง Tom Select (select2-style) สำหรับ 3 ช่อง multi-select */
+    initVisitSelects() {
+      if (typeof TomSelect === 'undefined') return;
+      const setup = (refName, list, field) => {
+        const el = this.$refs[refName];
+        if (!el) return;
+        if (el.tomselect) el.tomselect.destroy();   // กัน init ซ้ำ
+        const cur = this.form[field] ? String(this.form[field]).split(/\s*,\s*/).filter(Boolean) : [];
+        const opts = {};
+        (list || []).concat(cur).forEach(v => { if (v) opts[v] = true; });
+        new TomSelect(el, {
+          plugins: ['remove_button'],
+          persist: false,
+          create: true,                 // พิมพ์เพิ่มเองได้ถ้าไม่มีในรายการ
+          createOnBlur: true,
+          maxItems: null,
+          options: Object.keys(opts).map(v => ({ value: v, text: v })),
+          items: cur,
+          onChange: (vals) => { this.form[field] = (vals || []).join(', '); }
+        });
+      };
+      setup('selSymptom',   this.options.symptoms,  'MainProblem');
+      setup('selCare',      this.options.care,      'CareProvided');
+      setup('selEducation', this.options.education, 'HealthEducation');
+    },
+
+    /** ล้างค่าใน Tom Select ทั้ง 3 ช่อง */
+    clearVisitSelects() {
+      ['selSymptom','selCare','selEducation'].forEach(r => {
+        const el = this.$refs[r];
+        if (el && el.tomselect) el.tomselect.clear(true);
+      });
     },
 
     filterPatients() {
@@ -377,6 +419,7 @@ function visitForm() {
       this.form.VisitorName = visitorName;
       this.photos = [];
       this.pdpaConsent = false;
+      this.clearVisitSelects();
     },
 
     // ── Photo handling ──

@@ -484,3 +484,29 @@ function api_getUpcomingVisits(token, days) {
   _CURRENT_TOKEN_ = token;
   try { return getUpcomingVisits(days); } catch (err) { return errResult(err.message); }
 }
+
+/**
+ * api_getVisitOptions(token) — ตัวเลือกหน้าเยี่ยมบ้านจากชีต Symptom
+ * A2:A = อาการ/ปัญหา · B2:B = การดูแล · C2:C = สุขศึกษา
+ * @returns {Object} { success, data: { symptoms:[], care:[], education:[] } }
+ */
+function api_getVisitOptions(token) {
+  _CURRENT_TOKEN_ = token;
+  try {
+    requireAuth_();
+    const sh = SpreadsheetApp.getActive().getSheetByName(SHEET_NAMES.SYMPTOM);
+    if (!sh) return okResult({ symptoms: [], care: [], education: [] }, 'ยังไม่มีชีต Symptom');
+    const lastRow = sh.getLastRow();
+    if (lastRow < 2) return okResult({ symptoms: [], care: [], education: [] }, 'ยังไม่มีข้อมูลตัวเลือก');
+    const values = sh.getRange(2, 1, lastRow - 1, 3).getValues();
+    const col = (i) => {
+      const seen = {};
+      return values.map(r => String(r[i] == null ? '' : r[i]).trim())
+                   .filter(v => v && !seen[v] && (seen[v] = true));
+    };
+    return okResult({ symptoms: col(0), care: col(1), education: col(2) }, 'ตัวเลือกหน้าเยี่ยม');
+  } catch (err) {
+    Logger.log('api_getVisitOptions error: ' + err.stack);
+    return errResult(err.message);
+  }
+}

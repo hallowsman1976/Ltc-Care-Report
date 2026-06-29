@@ -29,6 +29,7 @@ const SHEET_NAMES = {
   PHOTOS:         'Photos',
   AUDIT_LOG:      'AuditLogs',
   NOTIFICATION:   'Notifications',
+  SYMPTOM:        'Symptom',
 };
 
 // ── คอลัมน์ที่ต้องเป็น Plain Text (กัน 0 นำหน้าหาย) ────
@@ -108,6 +109,10 @@ const SHEET_SCHEMA = {
     'NotificationID','PatientID','VisitID','NotificationType','Title','Message',
     'Channel','RecipientUserID','ScheduledAt','SentAt','Status',
     'LineStatusCode','LineResponse','CreatedBy','CreatedAt'
+  ],
+  // ── ตัวเลือกหน้าเยี่ยมบ้าน (A=อาการ, B=การดูแล, C=สุขศึกษา) ──
+  [SHEET_NAMES.SYMPTOM]: [
+    'อาการ/ปัญหาที่พบ', 'การดูแลที่ให้', 'การให้สุขศึกษา'
   ],
 };
 

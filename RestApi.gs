@@ -340,7 +340,7 @@ const INVOKE_ALLOW = new Set([
   'api_getCarePlanByPatient', 'api_getActiveCarePlan',
   // Visit
   'api_saveVisit', 'api_updateVisit', 'api_getVisitsByPatient', 'api_getVisitById',
-  'api_calculateVisitNo', 'api_getOverdueVisits', 'api_getUpcomingVisits',
+  'api_calculateVisitNo', 'api_getOverdueVisits', 'api_getUpcomingVisits', 'api_getVisitOptions',
   // Assessment
   'api_saveVitalSigns', 'api_getVitalSignsByPatient', 'api_saveADL', 'api_getADLByPatient',
   'api_savePPS', 'api_getPPSByPatient', 'api_saveMentalHealth', 'api_getMentalHealthByPatient',
