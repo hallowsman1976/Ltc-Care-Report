@@ -1499,8 +1499,8 @@ function caseForm() {
     </div>
   </div>
 
-  <!-- ── 1. เลือกผู้ป่วย ── -->
-  <div class="card mb-4">
+  <!-- ── 1. เลือกผู้ป่วย (ซ่อนเมื่อเลือกแล้ว) ── -->
+  <div class="card mb-4" x-show="!selectedPatient">
     <div class="section-title">👤 เลือกผู้รับบริการ <span class="text-red-500">*</span></div>
 
     <div class="relative">
