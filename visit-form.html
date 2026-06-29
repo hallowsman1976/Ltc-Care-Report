@@ -312,15 +312,10 @@ function visitForm() {
     async loadPatients() {
       this.loading = true;
       try {
+        // Backend (getPatients → _filterByRole_) กรองให้ CG เห็นเฉพาะที่ assign อยู่แล้ว
         const r = await rpc('api_getPatients', window.LTCApp.token, {});
         if (!r.success) { showError(r.message); return; }
-        let list = r.data || [];
-        // CG: เลือกได้เฉพาะผู้สูงอายุที่ถูก assign ให้รับผิดชอบ (กันพลาด ซ้ำกับ backend)
-        const u = window.LTCApp.user;
-        if (u && u.role === 'cg') {
-          list = list.filter(p => p.CaregiverID === u.userId);
-        }
-        this.patients = list;
+        this.patients = r.data || [];
         this.filteredPatients = [...this.patients];
       } catch (e) {
         showError(e.message || 'โหลดรายชื่อไม่สำเร็จ');
