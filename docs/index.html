@@ -628,7 +628,8 @@ main { animation: fadein .5s var(--ease) both; }
 <!-- ════════════════════════════════════════════════════════ -->
 <!-- ── DASHBOARD CONTENT ─────────────────────────────────── -->
 <!-- ════════════════════════════════════════════════════════ -->
-<div x-show="!dashboardLoading && !dashboardError && dashboard">
+<template x-if="!dashboardLoading && !dashboardError && dashboard">
+<div>
 
   <!-- ── 8 Stat Cards ─────────────────────────────────────── -->
   <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
@@ -821,6 +822,7 @@ main { animation: fadein .5s var(--ease) both; }
     · LTC Care Report v<span x-text="appConfig.APP_VERSION || ''"></span>
   </div>
 </div>
+</template>
 
         </div>
 
@@ -1196,7 +1198,7 @@ main { animation: fadein .5s var(--ease) both; }
           <p>ยังไม่มีประวัติการดูแล</p>
         </div>
         <div class="relative space-y-3" x-show="detail?.timeline?.length">
-          <template x-for="e in detail.timeline" :key="e.id">
+          <template x-for="e in (detail?.timeline || [])" :key="e.id">
             <div class="flex gap-3 items-start">
               <div class="w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0"
                    :class="timelineColor(e.type)" x-text="timelineIcon(e.type)"></div>

@@ -368,7 +368,7 @@
           <p>ยังไม่มีประวัติการดูแล</p>
         </div>
         <div class="relative space-y-3" x-show="detail?.timeline?.length">
-          <template x-for="e in detail.timeline" :key="e.id">
+          <template x-for="e in (detail?.timeline || [])" :key="e.id">
             <div class="flex gap-3 items-start">
               <div class="w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0"
                    :class="timelineColor(e.type)" x-text="timelineIcon(e.type)"></div>

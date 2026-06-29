@@ -89,7 +89,8 @@
 <!-- ════════════════════════════════════════════════════════ -->
 <!-- ── DASHBOARD CONTENT ─────────────────────────────────── -->
 <!-- ════════════════════════════════════════════════════════ -->
-<div x-show="!dashboardLoading && !dashboardError && dashboard">
+<template x-if="!dashboardLoading && !dashboardError && dashboard">
+<div>
 
   <!-- ── 8 Stat Cards ─────────────────────────────────────── -->
   <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
@@ -282,3 +283,4 @@
     · LTC Care Report v<span x-text="appConfig.APP_VERSION || ''"></span>
   </div>
 </div>
+</template>
