@@ -3271,8 +3271,26 @@ function settingView() {
     notifications: [],
     customMsg: '',
 
-    async init() {
+    _loaded: false,
+
+    init() {
+      // โหลดเมื่อผู้ใช้เปิดหน้า settings (ตอน init ครั้งแรกอาจยังไม่ login → user เป็น null)
+      window.addEventListener('ltc-page', (e) => {
+        if (e.detail === 'settings') this.ensureLoaded();
+      });
+      // ถ้าเปิดหน้า settings อยู่แล้ว (เช่น login แล้วอยู่หน้านี้)
+      if (this.$root.page === 'settings') {
+        this.ensureLoaded();
+      } else {
+        this.loading = false;
+      }
+    },
+
+    /** ensureLoaded() — โหลด settings ครั้งเดียวเมื่อเป็น admin */
+    async ensureLoaded() {
+      if (this._loaded) return;
       if (this.$root.user?.role !== 'admin') { this.loading = false; return; }
+      this._loaded = true;
       await this.load();
     },
 
