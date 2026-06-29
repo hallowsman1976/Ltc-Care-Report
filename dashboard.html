@@ -97,7 +97,7 @@
     <div class="stat-card stat-blue">
       <div class="stat-icon">👥</div>
       <div>
-        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.totalCases)"></div>
+        <div class="stat-value" x-count="dashboard?.cards?.totalCases"></div>
         <div class="stat-label">เคสทั้งหมด</div>
       </div>
     </div>
@@ -106,7 +106,7 @@
     <div class="stat-card stat-orange">
       <div class="stat-icon">👴</div>
       <div>
-        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.elderlyDependent)"></div>
+        <div class="stat-value" x-count="dashboard?.cards?.elderlyDependent"></div>
         <div class="stat-label">ผู้สูงอายุพึ่งพิง</div>
         <div class="stat-sub">อายุ ≥ 60 ปี · ADL ≤ 11</div>
       </div>
@@ -116,7 +116,7 @@
     <div class="stat-card stat-purple">
       <div class="stat-icon">🧑‍🦽</div>
       <div>
-        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.otherDependent)"></div>
+        <div class="stat-value" x-count="dashboard?.cards?.otherDependent"></div>
         <div class="stat-label">ผู้พึ่งพิงรายอื่น</div>
         <div class="stat-sub">อายุ &lt; 60 ปี · ADL ≤ 11</div>
       </div>
@@ -126,7 +126,7 @@
     <div class="stat-card stat-green">
       <div class="stat-icon">🏠</div>
       <div>
-        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.visitsThisMonth)"></div>
+        <div class="stat-value" x-count="dashboard?.cards?.visitsThisMonth"></div>
         <div class="stat-label">เยี่ยมเดือนนี้</div>
       </div>
     </div>
@@ -135,7 +135,7 @@
     <div class="stat-card stat-yellow">
       <div class="stat-icon">⏰</div>
       <div>
-        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.nearingVisitCount)"></div>
+        <div class="stat-value" x-count="dashboard?.cards?.nearingVisitCount"></div>
         <div class="stat-label">ใกล้ครบกำหนด</div>
         <div class="stat-sub">ภายใน 7 วัน</div>
       </div>
@@ -145,7 +145,7 @@
     <div class="stat-card stat-red">
       <div class="stat-icon">⚠️</div>
       <div>
-        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.overdueCount)"></div>
+        <div class="stat-value" x-count="dashboard?.cards?.overdueCount"></div>
         <div class="stat-label">เลยกำหนดเยี่ยม</div>
       </div>
     </div>
@@ -154,7 +154,7 @@
     <div class="stat-card stat-pink">
       <div class="stat-icon">🧠</div>
       <div>
-        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.highRiskMental)"></div>
+        <div class="stat-value" x-count="dashboard?.cards?.highRiskMental"></div>
         <div class="stat-label">สุขภาพจิตเสี่ยงสูง</div>
       </div>
     </div>
@@ -163,7 +163,7 @@
     <div class="stat-card stat-slate">
       <div class="stat-icon">🕊️</div>
       <div>
-        <div class="stat-value" x-text="formatNumber(dashboard?.cards?.palliativeCount)"></div>
+        <div class="stat-value" x-count="dashboard?.cards?.palliativeCount"></div>
         <div class="stat-label">Palliative Care</div>
         <div class="stat-sub">PPS ≤ 30%</div>
       </div>

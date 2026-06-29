@@ -360,6 +360,29 @@ document.addEventListener('alpine:init', () => {
 
     cleanup(() => fp.destroy());
   });
+
+  // ── Animated counter: <span x-count="dashboard?.cards?.totalCases"></span> ──
+  Alpine.directive('count', (el, { expression }, { evaluateLater, effect }) => {
+    const getVal = evaluateLater(expression);
+    let current = 0, raf = null;
+    const fmt = (n) => Math.round(n).toLocaleString('th-TH');
+    effect(() => {
+      getVal(v => {
+        const target = Number(v) || 0;
+        if (target === current) { el.textContent = fmt(target); return; }
+        cancelAnimationFrame(raf);
+        const start = current, t0 = performance.now(), dur = 950;
+        const tick = (now) => {
+          const p = Math.min(1, (now - t0) / dur);
+          const eased = 1 - Math.pow(1 - p, 3);   // easeOutCubic
+          current = start + (target - start) * eased;
+          el.textContent = fmt(current);
+          if (p < 1) raf = requestAnimationFrame(tick); else current = target;
+        };
+        raf = requestAnimationFrame(tick);
+      });
+    });
+  });
 });
 
 // ============================================================

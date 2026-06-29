@@ -9,7 +9,7 @@
   <!-- Fonts: Noto Sans Thai -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -17,16 +17,16 @@
     tailwind.config = {
       theme: {
         extend: {
-          fontFamily: { sans: ['Noto Sans Thai', 'system-ui', 'sans-serif'] },
+          fontFamily: { sans: ['-apple-system','BlinkMacSystemFont','Anuphan','Segoe UI','system-ui','sans-serif'] },
           colors: {
             primary: {
-              50:'#eff6ff', 100:'#dbeafe', 200:'#bfdbfe', 300:'#93c5fd',
-              400:'#60a5fa', 500:'#3b82f6', 600:'#2563eb', 700:'#1d4ed8',
-              800:'#1e40af', 900:'#1e3a8a'
+              50:'#eef5ff', 100:'#dbe9ff', 200:'#bcd6ff', 300:'#8ebcff',
+              400:'#5a9bff', 500:'#2e83ff', 600:'#0a6cff', 700:'#0a57d8',
+              800:'#1a2138', 900:'#0f1424'
             },
             accent: {
-              50:'#f0fdf4', 100:'#dcfce7', 200:'#bbf7d0', 300:'#86efac',
-              400:'#4ade80', 500:'#22c55e', 600:'#16a34a', 700:'#15803d'
+              50:'#ecfdf3', 100:'#d4f7e1', 200:'#a8eec3', 300:'#6fe09e',
+              400:'#34c759', 500:'#1f9d4d', 600:'#178043', 700:'#136636'
             }
           }
         }
@@ -75,7 +75,7 @@
       </div>
 
       <!-- Login Form -->
-      <div class="bg-white rounded-2xl shadow-2xl p-6 sm:p-8">
+      <div class="auth-card p-6 sm:p-8">
         <h2 class="text-lg font-bold text-slate-800 mb-1">เข้าสู่ระบบ</h2>
         <p class="text-xs text-slate-500 mb-6">กรอกชื่อผู้ใช้และรหัสผ่านของท่าน</p>
 
