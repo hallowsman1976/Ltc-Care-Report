@@ -834,7 +834,7 @@ main { animation: fadein .5s var(--ease) both; }
   <!-- ── Header ── -->
   <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
     <div>
-      <h1 class="text-xl sm:text-2xl font-bold text-slate-800">👥 ผู้รับบริการ</h1>
+      <h1 class="text-xl sm:text-2xl font-bold text-slate-800">👥 ผู้มีภาวะพึ่งพิง</h1>
       <p class="text-xs text-slate-500 mt-0.5">
         ทั้งหมด <span class="font-semibold" x-text="patients.length"></span> ราย
         · กรองอยู่ <span class="font-semibold text-primary-700" x-text="filtered.length"></span> ราย
@@ -842,7 +842,7 @@ main { animation: fadein .5s var(--ease) both; }
     </div>
     <div class="flex gap-2">
       <button @click="loadPatients()" class="btn btn-secondary btn-sm" :disabled="loading">🔄</button>
-      <button @click="openAdd()" class="btn btn-primary btn-sm" x-show="canCreate">+ เพิ่มผู้รับบริการ</button>
+      <button @click="openAdd()" class="btn btn-primary btn-sm" x-show="canCreate">+ เพิ่มผู้มีภาวะพึ่งพิง</button>
     </div>
   </div>
 
@@ -869,7 +869,7 @@ main { animation: fadein .5s var(--ease) both; }
   <div x-show="!loading && filtered.length">
     <!-- Mobile cards -->
     <div class="md:hidden space-y-2">
-      <template x-for="p in filtered" :key="p.PatientID">
+      <template x-for="p in paged()" :key="p.PatientID">
         <div class="card p-3" @click="openDetail(p)">
           <div class="flex items-start gap-3">
             <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0"
@@ -910,7 +910,7 @@ main { animation: fadein .5s var(--ease) both; }
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
-            <template x-for="p in filtered" :key="p.PatientID">
+            <template x-for="p in paged()" :key="p.PatientID">
               <tr class="hover:bg-slate-50">
                 <td class="px-4 py-3 font-medium" x-text="p.FullName"></td>
                 <td class="px-4 py-3 font-mono text-xs" x-text="p.HN||'-'"></td>
@@ -934,14 +934,21 @@ main { animation: fadein .5s var(--ease) both; }
         </table>
       </div>
     </div>
+
+    <!-- ── Pagination (10 แถว/หน้า) ── -->
+    <div class="flex items-center justify-between gap-2 mt-3" x-show="totalPages() > 1">
+      <button @click="goTo(page-1)" :disabled="page<=1" class="btn btn-secondary btn-sm">← ก่อนหน้า</button>
+      <span class="text-sm text-slate-500">หน้า <b class="text-primary-700" x-text="page"></b> / <span x-text="totalPages()"></span></span>
+      <button @click="goTo(page+1)" :disabled="page>=totalPages()" class="btn btn-secondary btn-sm">ถัดไป →</button>
+    </div>
   </div>
 
   <!-- ── Empty ── -->
   <div x-show="!loading && !filtered.length" class="empty-state">
     <div class="icon">📭</div>
-    <p x-show="search">ไม่พบผู้รับบริการที่ตรงกับ "<span x-text="search"></span>"</p>
-    <p x-show="!search">ยังไม่มีผู้รับบริการในระบบ</p>
-    <button x-show="canCreate" @click="openAdd()" class="btn btn-primary mt-4">+ เพิ่มผู้รับบริการ</button>
+    <p x-show="search">ไม่พบผู้มีภาวะพึ่งพิงที่ตรงกับ "<span x-text="search"></span>"</p>
+    <p x-show="!search">ยังไม่มีผู้มีภาวะพึ่งพิงในระบบ</p>
+    <button x-show="canCreate" @click="openAdd()" class="btn btn-primary mt-4">+ เพิ่มผู้มีภาวะพึ่งพิง</button>
   </div>
 
   <!-- ════════════════════════════════════════════════════════ -->
@@ -953,7 +960,7 @@ main { animation: fadein .5s var(--ease) both; }
     <div class="bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl shadow-2xl max-h-[95vh] flex flex-col">
 
       <div class="px-5 py-4 border-b flex items-center justify-between sticky top-0 bg-white rounded-t-2xl">
-        <h3 class="font-bold text-slate-800" x-text="editingId ? '✏️ แก้ไขข้อมูลผู้รับบริการ' : '➕ เพิ่มผู้รับบริการใหม่'"></h3>
+        <h3 class="font-bold text-slate-800" x-text="editingId ? '✏️ แก้ไขข้อมูลผู้มีภาวะพึ่งพิง' : '➕ เพิ่มผู้มีภาวะพึ่งพิงใหม่'"></h3>
         <button @click="closeForm()" class="text-2xl text-slate-400 hover:text-slate-700">&times;</button>
       </div>
 
@@ -1119,7 +1126,7 @@ main { animation: fadein .5s var(--ease) both; }
             <input type="checkbox" x-model="pdpaConsent" class="mt-0.5 w-5 h-5 accent-primary-600">
             <span class="text-xs text-blue-900">
               <b>ความยินยอมตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล (PDPA):</b>
-              ข้าพเจ้าได้รับความยินยอมจากผู้รับบริการ/ผู้แทนโดยชอบธรรม ในการเก็บรวบรวม ใช้
+              ข้าพเจ้าได้รับความยินยอมจากผู้มีภาวะพึ่งพิง/ผู้แทนโดยชอบธรรม ในการเก็บรวบรวม ใช้
               และประมวลผลข้อมูลส่วนบุคคลและข้อมูลสุขภาพ เพื่อการดูแลตามสิทธิประโยชน์ LTC เท่านั้น
             </span>
           </label>
@@ -1218,6 +1225,8 @@ function caseForm() {
     patients: [], filtered: [],
     usersList: [],
     search: '',
+    page: 1,
+    perPage: 10,
     loading: true,
     showForm: false,
     showDetail: false,
@@ -1270,14 +1279,26 @@ function caseForm() {
 
     applyFilter() {
       const q = (this.search || '').trim().toLowerCase();
-      if (!q) { this.filtered = [...this.patients]; return; }
-      this.filtered = this.patients.filter(p => {
+      this.filtered = !q ? [...this.patients] : this.patients.filter(p => {
         return (p.FullName && p.FullName.toLowerCase().includes(q)) ||
                (p.HN && String(p.HN).toLowerCase().includes(q)) ||
                (p.VillageName && p.VillageName.toLowerCase().includes(q)) ||
                (String(p.VillageNo||'').toLowerCase().includes(q)) ||
                (String(p.CID||'').includes(q));
       });
+      this.page = 1;   // รีเซ็ตไปหน้าแรกทุกครั้งที่กรอง
+    },
+
+    // ── Pagination (10 แถว/หน้า) ──
+    totalPages() { return Math.max(1, Math.ceil(this.filtered.length / this.perPage)); },
+    paged() {
+      const pg = Math.min(this.page, this.totalPages());
+      const start = (pg - 1) * this.perPage;
+      return this.filtered.slice(start, start + this.perPage);
+    },
+    goTo(n) {
+      this.page = Math.min(Math.max(1, n), this.totalPages());
+      const m = document.getElementById('main'); if (m) m.scrollTo({ top: 0, behavior: 'smooth' });
     },
 
     openAdd() {
@@ -1359,11 +1380,11 @@ function caseForm() {
       }
       // PDPA consent บังคับสำหรับผู้ป่วยใหม่
       if (!this.editingId && !this.pdpaConsent) {
-        showError('กรุณายืนยันความยินยอม PDPA ก่อนบันทึกข้อมูลผู้รับบริการ'); return;
+        showError('กรุณายืนยันความยินยอม PDPA ก่อนบันทึกข้อมูลผู้มีภาวะพึ่งพิง'); return;
       }
       // Confirm
       const ok = await showConfirm(
-        this.editingId ? 'บันทึกการแก้ไข?' : 'เพิ่มผู้รับบริการใหม่?',
+        this.editingId ? 'บันทึกการแก้ไข?' : 'เพิ่มผู้มีภาวะพึ่งพิงใหม่?',
         'ชื่อ: ' + this.form.FullName
       );
       if (!ok) return;
@@ -4238,7 +4259,7 @@ function app() {
     // ── Navigation ──
     navItems: [
       { page:'dashboard',   label:'หน้าหลัก',         shortLabel:'หลัก',     icon:'📊', bottom:true,  roles:['admin','cm','cg','viewer'] },
-      { page:'patients',    label:'ผู้รับบริการ',      shortLabel:'ผู้ป่วย',  icon:'👥', bottom:true,  roles:['admin','cm','cg','viewer'] },
+      { page:'patients',    label:'ผู้มีภาวะพึ่งพิง',   shortLabel:'พึ่งพิง',  icon:'👥', bottom:true,  roles:['admin','cm','cg','viewer'] },
       { page:'visits',      label:'การเยี่ยมบ้าน',     shortLabel:'เยี่ยม',  icon:'🚪', bottom:true,  roles:['admin','cm','cg'] },
       { page:'assessment',  label:'แบบประเมิน',       shortLabel:'ประเมิน',  icon:'📋', bottom:true,  roles:['admin','cm','cg'] },
       { page:'assign',      label:'มอบหมายงาน',       shortLabel:'มอบหมาย', icon:'🧑‍🤝‍🧑', bottom:false, roles:['admin','cm'] },
