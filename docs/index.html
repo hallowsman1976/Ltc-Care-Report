@@ -871,7 +871,7 @@ html, body {
             </div>
             <div>
               <label class="form-label">วันเดือนปีเกิด</label>
-              <input type="text" x-thdate="form.BirthDate" class="form-input" placeholder="เลือกวันเกิด">
+              <input type="text" x-thdate.birth="form.BirthDate" class="form-input" placeholder="เลือกวันเกิด">
               <p x-show="form.BirthDate" class="text-xs text-slate-400 mt-1">
                 อายุ <span class="font-semibold text-primary-700" x-text="calcAge(form.BirthDate)"></span> ปี
               </p>
@@ -3731,8 +3731,12 @@ function _beHeader_(_sel, _str, fp) {
 
 document.addEventListener('alpine:init', () => {
   if (!window.Alpine) return;
-  Alpine.directive('thdate', (el, { expression }, { evaluateLater, effect, cleanup }) => {
+  Alpine.directive('thdate', (el, { expression, modifiers }, { evaluateLater, effect, cleanup }) => {
     if (typeof window.flatpickr !== 'function') { console.warn('flatpickr ยังไม่โหลด'); return; }
+
+    // .birth → เปิดปฏิทินเด้งไปช่วงผู้สูงอายุ (~พ.ศ. 2498) + ห้ามเลือกอนาคต
+    const isBirth = modifiers && modifiers.includes('birth');
+    const BIRTH_VIEW = new Date(1955, 0, 1); // พ.ศ. 2498 (กลางช่วง 2480–2510)
 
     const getVal = evaluateLater(expression);
     const setRaw = evaluateLater(expression + ' = __thv');
@@ -3746,6 +3750,11 @@ document.addEventListener('alpine:init', () => {
       dateFormat: 'Y-m-d',
       allowInput: false,
       disableMobile: true,
+      maxDate: isBirth ? 'today' : undefined,
+      onOpen: (sel, str, fp2) => {
+        // ถ้ายังไม่มีค่า ให้เด้งมุมมองไปช่วงผู้สูงอายุ (เฉพาะช่องวันเกิด)
+        if (isBirth && !fp2.selectedDates.length) fp2.jumpToDate(BIRTH_VIEW);
+      },
       formatDate: (date, format) => {
         if (format === 'THAI') {
           return date.getDate() + ' ' + TH_MONTHS_SHORT[date.getMonth()] + ' ' + (date.getFullYear() + 543);

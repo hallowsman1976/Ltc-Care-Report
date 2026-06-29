@@ -148,7 +148,7 @@
             </div>
             <div>
               <label class="form-label">วันเดือนปีเกิด</label>
-              <input type="text" x-thdate="form.BirthDate" class="form-input" placeholder="เลือกวันเกิด">
+              <input type="text" x-thdate.birth="form.BirthDate" class="form-input" placeholder="เลือกวันเกิด">
               <p x-show="form.BirthDate" class="text-xs text-slate-400 mt-1">
                 อายุ <span class="font-semibold text-primary-700" x-text="calcAge(form.BirthDate)"></span> ปี
               </p>
