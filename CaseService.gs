@@ -822,3 +822,40 @@ function api_assignCaregiver(token, caregiverId, patientIds) {
     return errResult(err.message);
   }
 }
+
+/**
+ * api_assignStaff(token, kind, staffId, patientIds) — มอบหมายผู้ป่วยให้ CG หรือ CM (admin/cm)
+ * @param {string} kind - 'cg' (CaregiverID) หรือ 'cm' (CareManagerID)
+ * @param {string} staffId - UserID
+ * @param {string[]} patientIds - รายการ PatientID ที่ให้ staff คนนี้รับผิดชอบ (sync แบบรวม)
+ */
+function api_assignStaff(token, kind, staffId, patientIds) {
+  _CURRENT_TOKEN_ = token;
+  try {
+    requirePermission_(token, 'patient', 'update');
+    const field = kind === 'cm' ? 'CareManagerID' : 'CaregiverID';
+    if (!staffId) return errResult('กรุณาเลือกผู้รับผิดชอบ');
+
+    const ids = Array.isArray(patientIds) ? patientIds : [];
+    const all = findAllData(SHEET_NAMES.PATIENTS);
+    if (!all.success) return all;
+
+    let assigned = 0, removed = 0;
+    (all.data || []).forEach(p => {
+      const status = String(p.Status || '').toLowerCase();
+      if (status === 'deleted' || status === 'inactive') return;
+      const want = ids.indexOf(p.PatientID) !== -1;
+      const isThis = p[field] === staffId;
+      const patch = {};
+      if (want && !isThis) { patch[field] = staffId; updateData(SHEET_NAMES.PATIENTS, 'PatientID', p.PatientID, patch); assigned++; }
+      else if (!want && isThis) { patch[field] = ''; updateData(SHEET_NAMES.PATIENTS, 'PatientID', p.PatientID, patch); removed++; }
+    });
+
+    writeAuditLog('UPDATE', 'patient', staffId, null, { action: 'assignStaff', kind, staffId, assigned, removed });
+    return okResult({ assigned, removed },
+      'มอบหมายสำเร็จ — เพิ่ม ' + assigned + ' ราย, ปลด ' + removed + ' ราย');
+  } catch (err) {
+    Logger.log('api_assignStaff error: ' + err.stack);
+    return errResult(err.message);
+  }
+}

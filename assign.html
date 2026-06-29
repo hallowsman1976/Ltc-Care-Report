@@ -1,43 +1,74 @@
 <!-- ============================================================
-     assign.html — มอบหมายผู้สูงอายุให้ผู้ดูแล (CG)  [admin/cm]
+     assign.html — มอบหมายผู้สูงอายุให้ผู้ดูแล (CG) / Care Manager (CM)  [admin/cm]
      ============================================================ -->
 <div x-data="assignView()" x-init="init()">
 
   <!-- Header -->
   <div class="mb-4">
-    <h1 class="text-xl sm:text-2xl font-bold text-slate-800">🧑‍🤝‍🧑 มอบหมายผู้สูงอายุให้ผู้ดูแล (CG)</h1>
-    <p class="text-xs text-slate-500 mt-0.5">เลือกผู้ดูแล แล้วติ๊กผู้สูงอายุที่ต้องการให้ดูแล</p>
+    <h1 class="text-xl sm:text-2xl font-bold text-slate-800">🧑‍🤝‍🧑 มอบหมายผู้สูงอายุ</h1>
+    <p class="text-xs text-slate-500 mt-0.5">สรุปจำนวนที่แต่ละคนดูแล และมอบหมายผู้สูงอายุให้ CG/CM</p>
   </div>
 
-  <!-- เลือก CG -->
-  <div class="card mb-4">
-    <label class="form-label">เลือกผู้ดูแล (CG)</label>
-    <select x-model="selectedCG" @change="onSelectCG()" class="form-input">
-      <option value="">-- เลือกผู้ดูแล --</option>
-      <template x-for="u in cgList()" :key="u.userId">
-        <option :value="u.userId" x-text="u.fullName + (u.phone ? ' · '+u.phone : '')"></option>
-      </template>
-    </select>
-    <p x-show="!cgList().length && !loading" class="text-xs text-amber-600 mt-2">
-      ยังไม่มีผู้ใช้บทบาท CG — เพิ่มได้ที่ ⚙️ ตั้งค่า → 👥 ผู้ใช้
-    </p>
+  <!-- Mode toggle -->
+  <div class="flex gap-2 mb-4">
+    <button @click="setMode('cg')" :class="mode==='cg'?'btn-primary':'btn-secondary'" class="btn btn-sm">👩‍⚕️ ผู้ดูแล (CG)</button>
+    <button @click="setMode('cm')" :class="mode==='cm'?'btn-primary':'btn-secondary'" class="btn btn-sm">👨‍⚕️ Care Manager (CM)</button>
   </div>
 
   <!-- Loading -->
-  <div x-show="loading"><div class="skeleton h-64 rounded-2xl"></div></div>
+  <div x-show="loading"><div class="skeleton h-40 rounded-2xl mb-4"></div></div>
 
-  <!-- รายชื่อผู้สูงอายุ -->
-  <div x-show="!loading && selectedCG">
-    <!-- toolbar -->
+  <!-- ── การ์ดสรุป: แต่ละคนดูแลกี่ราย ── -->
+  <div x-show="!loading" class="card p-0 overflow-hidden mb-4">
+    <div class="px-4 py-3 border-b flex items-center justify-between">
+      <span class="font-bold text-sm" x-text="'📊 สรุปภาระงาน — ' + (mode==='cg'?'ผู้ดูแล (CG)':'Care Manager (CM)')"></span>
+      <button @click="reload()" class="btn btn-secondary btn-sm">🔄</button>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-slate-600"><tr>
+          <th class="text-left px-4 py-2">ชื่อ</th>
+          <th class="text-center px-4 py-2">โทรศัพท์</th>
+          <th class="text-center px-4 py-2">ดูแล (ราย)</th>
+          <th class="text-center px-4 py-2">จัดการ</th>
+        </tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          <template x-for="u in summary()" :key="u.userId">
+            <tr class="hover:bg-slate-50" :class="selectedStaff===u.userId ? 'bg-primary-50' : ''">
+              <td class="px-4 py-2 font-medium" x-text="u.fullName"></td>
+              <td class="px-4 py-2 text-center text-xs text-slate-500" x-text="u.phone||'-'"></td>
+              <td class="px-4 py-2 text-center">
+                <span class="badge" :class="u.count>0?'badge-blue':'badge-gray'" x-text="u.count"></span>
+              </td>
+              <td class="px-4 py-2 text-center">
+                <button @click="pick(u.userId)" class="btn btn-outline btn-sm">✏️ มอบหมาย</button>
+              </td>
+            </tr>
+          </template>
+          <tr x-show="!summary().length">
+            <td colspan="4" class="text-center py-5 text-slate-400">
+              ยังไม่มีผู้ใช้บทบาทนี้ — เพิ่มได้ที่ ⚙️ ตั้งค่า → 👥 ผู้ใช้
+            </td>
+          </tr>
+          <!-- ยังไม่มอบหมาย -->
+          <tr class="bg-amber-50/50">
+            <td class="px-4 py-2 text-slate-500 italic" colspan="2">— ยังไม่ถูกมอบหมาย —</td>
+            <td class="px-4 py-2 text-center"><span class="badge badge-yellow" x-text="unassignedCount()"></span></td>
+            <td class="px-4 py-2"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── เลือกผู้รับผิดชอบ + รายชื่อ ── -->
+  <div x-show="!loading && selectedStaff">
     <div class="card mb-3 p-3">
       <div class="flex flex-wrap items-center gap-2 justify-between">
+        <div class="text-sm">มอบหมายให้: <b class="text-primary-700" x-text="staffName(selectedStaff)"></b></div>
         <div class="flex-1 relative min-w-[180px]">
           <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
           <input type="text" x-model="search" class="form-input pl-10" placeholder="ค้นหาชื่อ / หมู่บ้าน...">
-        </div>
-        <div class="text-sm text-slate-600">
-          เลือกอยู่ <span class="font-bold text-primary-700" x-text="selectedCount()"></span> /
-          <span x-text="patients.length"></span> ราย
         </div>
         <div class="flex gap-2">
           <button @click="selectAllFiltered(true)" class="btn btn-secondary btn-sm">เลือกที่กรอง</button>
@@ -46,9 +77,8 @@
       </div>
     </div>
 
-    <!-- list -->
     <div class="card p-0 overflow-hidden">
-      <div class="divide-y divide-slate-100 max-h-[60vh] overflow-y-auto">
+      <div class="divide-y divide-slate-100 max-h-[55vh] overflow-y-auto">
         <template x-for="p in filtered()" :key="p.PatientID">
           <label class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-slate-50">
             <input type="checkbox" class="w-5 h-5 accent-primary-600 flex-shrink-0"
@@ -62,29 +92,22 @@
                 <span x-text="p.VillageName||('ม.'+(p.VillageNo||'-'))"></span>
               </div>
             </div>
-            <!-- CG ปัจจุบัน (ถ้าเป็นคนอื่น) -->
-            <span x-show="p.CaregiverID && p.CaregiverID !== selectedCG"
+            <span x-show="curStaff(p) && curStaff(p) !== selectedStaff"
                   class="badge badge-yellow text-xs flex-shrink-0"
-                  x-text="'ดูแลโดย: '+cgName(p.CaregiverID)"></span>
+                  x-text="(mode==='cg'?'CG: ':'CM: ')+staffName(curStaff(p))"></span>
           </label>
         </template>
         <div x-show="!filtered().length" class="text-center py-8 text-slate-400">ไม่พบผู้สูงอายุ</div>
       </div>
     </div>
 
-    <!-- save bar -->
     <div class="sticky bottom-0 mt-3 bg-white/90 backdrop-blur rounded-2xl border border-slate-200 p-3 flex items-center justify-between shadow-lg">
-      <span class="text-sm text-slate-600">มอบหมาย <b class="text-primary-700" x-text="selectedCount()"></b> รายให้
-        <b x-text="cgName(selectedCG)"></b></span>
+      <span class="text-sm text-slate-600">เลือกอยู่ <b class="text-primary-700" x-text="selectedCount()"></b> /
+        <span x-text="patients.length"></span> ราย</span>
       <button @click="save()" class="btn btn-primary" :disabled="saving">
         <span x-text="saving ? 'กำลังบันทึก...' : '💾 บันทึกการมอบหมาย'"></span>
       </button>
     </div>
-  </div>
-
-  <div x-show="!loading && !selectedCG" class="empty-state">
-    <div class="icon">👆</div>
-    <p>เลือกผู้ดูแล (CG) ด้านบนเพื่อเริ่มมอบหมาย</p>
   </div>
 </div>
 
@@ -93,39 +116,72 @@ function assignView() {
   return {
     userList: [],     // cm/cg/admin (สำหรับชื่อ)
     patients: [],     // ผู้สูงอายุ active ทั้งหมด
-    selectedCG: '',
+    mode: 'cg',       // 'cg' | 'cm'
+    selectedStaff: '',
     assigned: {},     // { patientId: true }
     search: '',
     loading: true,
     saving: false,
 
-    async init() {
+    async init() { await this.reload(); },
+
+    async reload() {
       this.loading = true;
       try {
-        await Promise.all([this.loadUsers(), this.loadPatients()]);
+        const [ru, rp] = await Promise.all([
+          rpc('api_getCaregivers', window.LTCApp.token),
+          rpc('api_getPatients', window.LTCApp.token, {})
+        ]);
+        if (ru.success) this.userList = ru.data || [];
+        if (rp.success) this.patients = rp.data || []; else showError(rp.message);
+        // refresh map ถ้ากำลังเลือกคนอยู่
+        if (this.selectedStaff) this.onSelectStaff();
       } finally { this.loading = false; }
     },
 
-    async loadUsers() {
-      const r = await rpc('api_getCaregivers', window.LTCApp.token);
-      if (r.success) this.userList = r.data || [];
-    },
-    async loadPatients() {
-      const r = await rpc('api_getPatients', window.LTCApp.token, {});
-      if (r.success) this.patients = r.data || [];
-      else showError(r.message);
-    },
+    field() { return this.mode === 'cm' ? 'CareManagerID' : 'CaregiverID'; },
+    curStaff(p) { return p[this.field()] || ''; },
 
-    cgList() { return this.userList.filter(u => u.role === 'cg'); },
-    cgName(id) {
+    staffList() { return this.userList.filter(u => u.role === this.mode); },
+    staffName(id) {
       const u = this.userList.find(x => x.userId === id);
       return u ? u.fullName : (id ? 'ไม่ทราบ' : '-');
     },
 
-    onSelectCG() {
-      // สร้าง map จากสถานะปัจจุบัน
+    /** summary() — รายชื่อ staff + จำนวนผู้ป่วยที่ดูแล (ของ mode ปัจจุบัน) */
+    summary() {
+      const f = this.field();
+      const count = {};
+      this.patients.forEach(p => { const id = p[f]; if (id) count[id] = (count[id]||0) + 1; });
+      return this.staffList()
+        .map(u => ({ userId: u.userId, fullName: u.fullName, phone: u.phone||'', count: count[u.userId] || 0 }))
+        .sort((a, b) => b.count - a.count);
+    },
+    unassignedCount() {
+      const f = this.field();
+      return this.patients.filter(p => !p[f]).length;
+    },
+
+    setMode(m) {
+      if (this.mode === m) return;
+      this.mode = m;
+      this.selectedStaff = '';
+      this.assigned = {};
+      this.search = '';
+    },
+
+    pick(id) {
+      this.selectedStaff = id;
+      this.onSelectStaff();
+      this.$nextTick(() => {
+        const el = document.getElementById('main'); if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+      });
+    },
+
+    onSelectStaff() {
+      const f = this.field();
       const m = {};
-      this.patients.forEach(p => { if (p.CaregiverID === this.selectedCG) m[p.PatientID] = true; });
+      this.patients.forEach(p => { if (p[f] === this.selectedStaff) m[p.PatientID] = true; });
       this.assigned = m;
       this.search = '';
     },
@@ -144,29 +200,26 @@ function assignView() {
       if (this.assigned[pid]) delete this.assigned[pid];
       else this.assigned[pid] = true;
     },
-
     selectAllFiltered(state) {
       this.filtered().forEach(p => {
         if (state) this.assigned[p.PatientID] = true;
         else delete this.assigned[p.PatientID];
       });
     },
-
     selectedCount() { return Object.keys(this.assigned).length; },
 
     async save() {
-      if (!this.selectedCG) { showError('กรุณาเลือกผู้ดูแล'); return; }
+      if (!this.selectedStaff) { showError('กรุณาเลือกผู้รับผิดชอบ'); return; }
       const ids = Object.keys(this.assigned);
       const ok = await showConfirm('บันทึกการมอบหมาย?',
-        'มอบหมาย ' + ids.length + ' ราย ให้ ' + this.cgName(this.selectedCG));
+        'มอบหมาย ' + ids.length + ' ราย ให้ ' + this.staffName(this.selectedStaff));
       if (!ok) return;
       this.saving = true;
       try {
-        const r = await rpc('api_assignCaregiver', window.LTCApp.token, this.selectedCG, ids);
+        const r = await rpc('api_assignStaff', window.LTCApp.token, this.mode, this.selectedStaff, ids);
         if (!r.success) { showError(r.message); return; }
         showSuccess(r.message);
-        await this.loadPatients();   // refresh CaregiverID ล่าสุด
-        this.onSelectCG();
+        await this.reload();
       } catch (e) { showError(e.message); }
       finally { this.saving = false; }
     }

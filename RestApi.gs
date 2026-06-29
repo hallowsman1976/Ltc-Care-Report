@@ -332,7 +332,7 @@ const INVOKE_ALLOW = new Set([
   // Patient / Case
   'api_getPatients', 'api_getPatientById', 'api_savePatient', 'api_updatePatient',
   'api_deletePatient', 'api_searchPatients', 'api_getPatientTimeline', 'api_getDashboardData',
-  'api_getCaregivers', 'api_assignCaregiver',
+  'api_getCaregivers', 'api_assignCaregiver', 'api_assignStaff',
   // Care Plan
   'api_saveCarePlan', 'api_updateCarePlan', 'api_approveCarePlan',
   'api_getCarePlanByPatient', 'api_getActiveCarePlan',
