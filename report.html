@@ -171,15 +171,20 @@ function reportView() {
     loading: false, fetched: false,
     orgName: '',
 
-    async init() {
-      this.orgName = window.LTCApp.appConfig?.ORG_NAME || '';
-      try {
-        const r = await rpc('api_getPatients', window.LTCApp.token, {});
-        if (r.success) {
-          this.patients = r.data || [];
-          this.villages = [...new Set(this.patients.map(p => p.VillageName || (p.VillageNo?'ม.'+p.VillageNo:'')).filter(v=>v))].sort();
-        }
-      } catch (e) {}
+    init() {
+      const load = async () => {
+        if (!window.LTCApp?.token) return;
+        this.orgName = window.LTCApp.appConfig?.ORG_NAME || '';
+        try {
+          const r = await rpc('api_getPatients', window.LTCApp.token, {});
+          if (r.success) {
+            this.patients = r.data || [];
+            this.villages = [...new Set(this.patients.map(p => p.VillageName || (p.VillageNo?'ม.'+p.VillageNo:'')).filter(v=>v))].sort();
+          }
+        } catch (e) {}
+      };
+      window.addEventListener('ltc-page', e => { if (e.detail === 'reports') load(); });
+      if (window.LTCApp?.page === 'reports') load();
     },
 
     selectType(id) {

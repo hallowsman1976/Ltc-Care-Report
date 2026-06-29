@@ -313,12 +313,17 @@ function visitForm() {
       };
     },
 
-    async init() {
+    init() {
       this.form = this.blankForm();
-      // อัตโนมัติเติม visitor จาก user ที่ login
-      this.form.VisitorID = window.LTCApp.user?.userId || '';
-      this.form.VisitorName = window.LTCApp.user?.fullName || window.LTCApp.user?.username || '';
-      await this.loadPatients();
+      const load = () => {
+        if (!window.LTCApp?.token) { this.loading = false; return; }
+        // อัตโนมัติเติม visitor จาก user ที่ login
+        this.form.VisitorID = window.LTCApp.user?.userId || '';
+        this.form.VisitorName = window.LTCApp.user?.fullName || window.LTCApp.user?.username || '';
+        this.loadPatients();
+      };
+      window.addEventListener('ltc-page', e => { if (e.detail === 'visits') load(); });
+      if (window.LTCApp?.page === 'visits') load(); else this.loading = false;
     },
 
     async loadPatients() {

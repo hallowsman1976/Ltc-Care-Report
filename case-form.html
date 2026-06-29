@@ -425,9 +425,14 @@ function caseForm() {
       return r === 'admin' || r === 'cm';
     },
 
-    async init() {
+    init() {
       this.form = this.blankForm();
-      await Promise.all([this.loadPatients(), this.loadUsers()]);
+      const load = () => {
+        if (window.LTCApp?.token) { this.loadPatients(); this.loadUsers(); }
+        else this.loading = false;
+      };
+      window.addEventListener('ltc-page', e => { if (e.detail === 'patients') load(); });
+      if (window.LTCApp?.page === 'patients') load(); else this.loading = false;
     },
 
     async loadPatients() {

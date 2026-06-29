@@ -548,7 +548,7 @@ main { animation: fadein .5s var(--ease) both; }
     <p class="text-xs text-slate-500 mt-0.5">
       ภาพรวมระบบการดูแลผู้สูงอายุและผู้พึ่งพิง
       <span x-show="dashboard?.generatedAt">
-        · อัปเดต <span x-text="formatThaiDate(dashboard.generatedAt)"></span>
+        · อัปเดต <span x-text="formatThaiDate(dashboard?.generatedAt)"></span>
       </span>
     </p>
   </div>
@@ -1255,9 +1255,14 @@ function caseForm() {
       return r === 'admin' || r === 'cm';
     },
 
-    async init() {
+    init() {
       this.form = this.blankForm();
-      await Promise.all([this.loadPatients(), this.loadUsers()]);
+      const load = () => {
+        if (window.LTCApp?.token) { this.loadPatients(); this.loadUsers(); }
+        else this.loading = false;
+      };
+      window.addEventListener('ltc-page', e => { if (e.detail === 'patients') load(); });
+      if (window.LTCApp?.page === 'patients') load(); else this.loading = false;
     },
 
     async loadPatients() {
@@ -1799,12 +1804,17 @@ function visitForm() {
       };
     },
 
-    async init() {
+    init() {
       this.form = this.blankForm();
-      // อัตโนมัติเติม visitor จาก user ที่ login
-      this.form.VisitorID = window.LTCApp.user?.userId || '';
-      this.form.VisitorName = window.LTCApp.user?.fullName || window.LTCApp.user?.username || '';
-      await this.loadPatients();
+      const load = () => {
+        if (!window.LTCApp?.token) { this.loading = false; return; }
+        // อัตโนมัติเติม visitor จาก user ที่ login
+        this.form.VisitorID = window.LTCApp.user?.userId || '';
+        this.form.VisitorName = window.LTCApp.user?.fullName || window.LTCApp.user?.username || '';
+        this.loadPatients();
+      };
+      window.addEventListener('ltc-page', e => { if (e.detail === 'visits') load(); });
+      if (window.LTCApp?.page === 'visits') load(); else this.loading = false;
     },
 
     async loadPatients() {
@@ -2531,22 +2541,24 @@ function assessmentForm() {
     },
 
     // ============================================================
-    async init() {
-      // โหลดผู้ป่วย
-      try {
-        const r = await rpc('api_getPatients', window.LTCApp.token, {});
-        if (r.success) this.patients = r.data || [];
-      } catch (e) { showError(e.message); }
-
-      // โหลด benefit items
-      try {
-        const r = await rpc('api_getBenefitItems', window.LTCApp.token);
-        if (r.success) { this.benefitItems = r.data.items; this.benefitGroups = r.data.groups; }
-      } catch (e) {}
-
-      // เริ่มต้น ADL ทุก field = 0
+    init() {
+      // เริ่มต้น ADL ทุก field = 0 (ไม่ต้อง login)
       this.adlItems.forEach(i => this.adl[i.key] = 0);
       this.calcADLTotal();
+
+      const load = async () => {
+        if (!window.LTCApp?.token) return;
+        try {
+          const r = await rpc('api_getPatients', window.LTCApp.token, {});
+          if (r.success) this.patients = r.data || [];
+        } catch (e) { showError(e.message); }
+        try {
+          const r = await rpc('api_getBenefitItems', window.LTCApp.token);
+          if (r.success) { this.benefitItems = r.data.items; this.benefitGroups = r.data.groups; }
+        } catch (e) {}
+      };
+      window.addEventListener('ltc-page', e => { if (e.detail === 'assessment') load(); });
+      if (window.LTCApp?.page === 'assessment') load();
     },
 
     get canSave() {
@@ -3392,15 +3404,20 @@ function reportView() {
     loading: false, fetched: false,
     orgName: '',
 
-    async init() {
-      this.orgName = window.LTCApp.appConfig?.ORG_NAME || '';
-      try {
-        const r = await rpc('api_getPatients', window.LTCApp.token, {});
-        if (r.success) {
-          this.patients = r.data || [];
-          this.villages = [...new Set(this.patients.map(p => p.VillageName || (p.VillageNo?'ม.'+p.VillageNo:'')).filter(v=>v))].sort();
-        }
-      } catch (e) {}
+    init() {
+      const load = async () => {
+        if (!window.LTCApp?.token) return;
+        this.orgName = window.LTCApp.appConfig?.ORG_NAME || '';
+        try {
+          const r = await rpc('api_getPatients', window.LTCApp.token, {});
+          if (r.success) {
+            this.patients = r.data || [];
+            this.villages = [...new Set(this.patients.map(p => p.VillageName || (p.VillageNo?'ม.'+p.VillageNo:'')).filter(v=>v))].sort();
+          }
+        } catch (e) {}
+      };
+      window.addEventListener('ltc-page', e => { if (e.detail === 'reports') load(); });
+      if (window.LTCApp?.page === 'reports') load();
     },
 
     selectType(id) {

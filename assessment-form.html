@@ -527,22 +527,24 @@ function assessmentForm() {
     },
 
     // ============================================================
-    async init() {
-      // โหลดผู้ป่วย
-      try {
-        const r = await rpc('api_getPatients', window.LTCApp.token, {});
-        if (r.success) this.patients = r.data || [];
-      } catch (e) { showError(e.message); }
-
-      // โหลด benefit items
-      try {
-        const r = await rpc('api_getBenefitItems', window.LTCApp.token);
-        if (r.success) { this.benefitItems = r.data.items; this.benefitGroups = r.data.groups; }
-      } catch (e) {}
-
-      // เริ่มต้น ADL ทุก field = 0
+    init() {
+      // เริ่มต้น ADL ทุก field = 0 (ไม่ต้อง login)
       this.adlItems.forEach(i => this.adl[i.key] = 0);
       this.calcADLTotal();
+
+      const load = async () => {
+        if (!window.LTCApp?.token) return;
+        try {
+          const r = await rpc('api_getPatients', window.LTCApp.token, {});
+          if (r.success) this.patients = r.data || [];
+        } catch (e) { showError(e.message); }
+        try {
+          const r = await rpc('api_getBenefitItems', window.LTCApp.token);
+          if (r.success) { this.benefitItems = r.data.items; this.benefitGroups = r.data.groups; }
+        } catch (e) {}
+      };
+      window.addEventListener('ltc-page', e => { if (e.detail === 'assessment') load(); });
+      if (window.LTCApp?.page === 'assessment') load();
     },
 
     get canSave() {
