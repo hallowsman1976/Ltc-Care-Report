@@ -779,3 +779,46 @@ function api_getDashboardData(token, filters) {
     return errResult('ดึงข้อมูล Dashboard ไม่สำเร็จ: ' + err.message);
   }
 }
+
+/**
+ * api_assignCaregiver(token, caregiverId, patientIds) — มอบหมายผู้สูงอายุให้ CG (admin/cm)
+ * sync แบบรวม: patient ใน patientIds → CaregiverID = caregiverId,
+ *   ส่วน patient ที่เคยเป็นของ CG นี้แต่ไม่อยู่ในลิสต์ → ปลดออก (CaregiverID = '')
+ * @param {string} token
+ * @param {string} caregiverId - UserID ของ CG
+ * @param {string[]} patientIds - รายการ PatientID ที่ต้องการให้ CG นี้ดูแล
+ */
+function api_assignCaregiver(token, caregiverId, patientIds) {
+  _CURRENT_TOKEN_ = token;
+  try {
+    requirePermission_(token, 'patient', 'update');
+    if (!caregiverId) return errResult('กรุณาเลือกผู้ดูแล (CG)');
+
+    const ids = Array.isArray(patientIds) ? patientIds : [];
+    const all = findAllData(SHEET_NAMES.PATIENTS);
+    if (!all.success) return all;
+
+    let assigned = 0, removed = 0;
+    (all.data || []).forEach(p => {
+      const status = String(p.Status || '').toLowerCase();
+      if (status === 'deleted' || status === 'inactive') return;
+      const want = ids.indexOf(p.PatientID) !== -1;
+      const isThis = p.CaregiverID === caregiverId;
+      if (want && !isThis) {
+        updateData(SHEET_NAMES.PATIENTS, 'PatientID', p.PatientID, { CaregiverID: caregiverId });
+        assigned++;
+      } else if (!want && isThis) {
+        updateData(SHEET_NAMES.PATIENTS, 'PatientID', p.PatientID, { CaregiverID: '' });
+        removed++;
+      }
+    });
+
+    writeAuditLog('UPDATE', 'patient', caregiverId, null,
+      { action: 'assignCaregiver', caregiverId, assigned, removed });
+    return okResult({ assigned, removed },
+      'มอบหมายสำเร็จ — เพิ่ม ' + assigned + ' ราย, ปลด ' + removed + ' ราย');
+  } catch (err) {
+    Logger.log('api_assignCaregiver error: ' + err.stack);
+    return errResult(err.message);
+  }
+}

@@ -1,0 +1,175 @@
+<!-- ============================================================
+     assign.html — มอบหมายผู้สูงอายุให้ผู้ดูแล (CG)  [admin/cm]
+     ============================================================ -->
+<div x-data="assignView()" x-init="init()">
+
+  <!-- Header -->
+  <div class="mb-4">
+    <h1 class="text-xl sm:text-2xl font-bold text-slate-800">🧑‍🤝‍🧑 มอบหมายผู้สูงอายุให้ผู้ดูแล (CG)</h1>
+    <p class="text-xs text-slate-500 mt-0.5">เลือกผู้ดูแล แล้วติ๊กผู้สูงอายุที่ต้องการให้ดูแล</p>
+  </div>
+
+  <!-- เลือก CG -->
+  <div class="card mb-4">
+    <label class="form-label">เลือกผู้ดูแล (CG)</label>
+    <select x-model="selectedCG" @change="onSelectCG()" class="form-input">
+      <option value="">-- เลือกผู้ดูแล --</option>
+      <template x-for="u in cgList()" :key="u.userId">
+        <option :value="u.userId" x-text="u.fullName + (u.phone ? ' · '+u.phone : '')"></option>
+      </template>
+    </select>
+    <p x-show="!cgList().length && !loading" class="text-xs text-amber-600 mt-2">
+      ยังไม่มีผู้ใช้บทบาท CG — เพิ่มได้ที่ ⚙️ ตั้งค่า → 👥 ผู้ใช้
+    </p>
+  </div>
+
+  <!-- Loading -->
+  <div x-show="loading"><div class="skeleton h-64 rounded-2xl"></div></div>
+
+  <!-- รายชื่อผู้สูงอายุ -->
+  <div x-show="!loading && selectedCG">
+    <!-- toolbar -->
+    <div class="card mb-3 p-3">
+      <div class="flex flex-wrap items-center gap-2 justify-between">
+        <div class="flex-1 relative min-w-[180px]">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+          <input type="text" x-model="search" class="form-input pl-10" placeholder="ค้นหาชื่อ / หมู่บ้าน...">
+        </div>
+        <div class="text-sm text-slate-600">
+          เลือกอยู่ <span class="font-bold text-primary-700" x-text="selectedCount()"></span> /
+          <span x-text="patients.length"></span> ราย
+        </div>
+        <div class="flex gap-2">
+          <button @click="selectAllFiltered(true)" class="btn btn-secondary btn-sm">เลือกที่กรอง</button>
+          <button @click="selectAllFiltered(false)" class="btn btn-secondary btn-sm">ล้างที่กรอง</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- list -->
+    <div class="card p-0 overflow-hidden">
+      <div class="divide-y divide-slate-100 max-h-[60vh] overflow-y-auto">
+        <template x-for="p in filtered()" :key="p.PatientID">
+          <label class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-slate-50">
+            <input type="checkbox" class="w-5 h-5 accent-primary-600 flex-shrink-0"
+                   :checked="!!assigned[p.PatientID]" @change="toggle(p.PatientID)">
+            <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0"
+                 :class="p.Sex==='หญิง'?'bg-pink-400':'bg-primary-500'" x-text="(p.FullName||'?').substring(0,1)"></div>
+            <div class="flex-1 min-w-0">
+              <div class="font-medium text-slate-800 truncate" x-text="p.FullName"></div>
+              <div class="text-xs text-slate-500">
+                <span x-text="(p.Age||'-')+' ปี'"></span> ·
+                <span x-text="p.VillageName||('ม.'+(p.VillageNo||'-'))"></span>
+              </div>
+            </div>
+            <!-- CG ปัจจุบัน (ถ้าเป็นคนอื่น) -->
+            <span x-show="p.CaregiverID && p.CaregiverID !== selectedCG"
+                  class="badge badge-yellow text-xs flex-shrink-0"
+                  x-text="'ดูแลโดย: '+cgName(p.CaregiverID)"></span>
+          </label>
+        </template>
+        <div x-show="!filtered().length" class="text-center py-8 text-slate-400">ไม่พบผู้สูงอายุ</div>
+      </div>
+    </div>
+
+    <!-- save bar -->
+    <div class="sticky bottom-0 mt-3 bg-white/90 backdrop-blur rounded-2xl border border-slate-200 p-3 flex items-center justify-between shadow-lg">
+      <span class="text-sm text-slate-600">มอบหมาย <b class="text-primary-700" x-text="selectedCount()"></b> รายให้
+        <b x-text="cgName(selectedCG)"></b></span>
+      <button @click="save()" class="btn btn-primary" :disabled="saving">
+        <span x-text="saving ? 'กำลังบันทึก...' : '💾 บันทึกการมอบหมาย'"></span>
+      </button>
+    </div>
+  </div>
+
+  <div x-show="!loading && !selectedCG" class="empty-state">
+    <div class="icon">👆</div>
+    <p>เลือกผู้ดูแล (CG) ด้านบนเพื่อเริ่มมอบหมาย</p>
+  </div>
+</div>
+
+<script>
+function assignView() {
+  return {
+    userList: [],     // cm/cg/admin (สำหรับชื่อ)
+    patients: [],     // ผู้สูงอายุ active ทั้งหมด
+    selectedCG: '',
+    assigned: {},     // { patientId: true }
+    search: '',
+    loading: true,
+    saving: false,
+
+    async init() {
+      this.loading = true;
+      try {
+        await Promise.all([this.loadUsers(), this.loadPatients()]);
+      } finally { this.loading = false; }
+    },
+
+    async loadUsers() {
+      const r = await rpc('api_getCaregivers', window.LTCApp.token);
+      if (r.success) this.userList = r.data || [];
+    },
+    async loadPatients() {
+      const r = await rpc('api_getPatients', window.LTCApp.token, {});
+      if (r.success) this.patients = r.data || [];
+      else showError(r.message);
+    },
+
+    cgList() { return this.userList.filter(u => u.role === 'cg'); },
+    cgName(id) {
+      const u = this.userList.find(x => x.userId === id);
+      return u ? u.fullName : (id ? 'ไม่ทราบ' : '-');
+    },
+
+    onSelectCG() {
+      // สร้าง map จากสถานะปัจจุบัน
+      const m = {};
+      this.patients.forEach(p => { if (p.CaregiverID === this.selectedCG) m[p.PatientID] = true; });
+      this.assigned = m;
+      this.search = '';
+    },
+
+    filtered() {
+      const q = (this.search || '').trim().toLowerCase();
+      if (!q) return this.patients;
+      return this.patients.filter(p =>
+        (p.FullName && p.FullName.toLowerCase().includes(q)) ||
+        (p.VillageName && p.VillageName.toLowerCase().includes(q)) ||
+        (String(p.VillageNo||'').toLowerCase().includes(q))
+      );
+    },
+
+    toggle(pid) {
+      if (this.assigned[pid]) delete this.assigned[pid];
+      else this.assigned[pid] = true;
+    },
+
+    selectAllFiltered(state) {
+      this.filtered().forEach(p => {
+        if (state) this.assigned[p.PatientID] = true;
+        else delete this.assigned[p.PatientID];
+      });
+    },
+
+    selectedCount() { return Object.keys(this.assigned).length; },
+
+    async save() {
+      if (!this.selectedCG) { showError('กรุณาเลือกผู้ดูแล'); return; }
+      const ids = Object.keys(this.assigned);
+      const ok = await showConfirm('บันทึกการมอบหมาย?',
+        'มอบหมาย ' + ids.length + ' ราย ให้ ' + this.cgName(this.selectedCG));
+      if (!ok) return;
+      this.saving = true;
+      try {
+        const r = await rpc('api_assignCaregiver', window.LTCApp.token, this.selectedCG, ids);
+        if (!r.success) { showError(r.message); return; }
+        showSuccess(r.message);
+        await this.loadPatients();   // refresh CaregiverID ล่าสุด
+        this.onSelectCG();
+      } catch (e) { showError(e.message); }
+      finally { this.saving = false; }
+    }
+  };
+}
+</script>

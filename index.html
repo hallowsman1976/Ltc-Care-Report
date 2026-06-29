@@ -209,6 +209,11 @@
           <?!= include('assessment-form') ?>
         </div>
 
+        <!-- Page: Assign CG -->
+        <div x-show="page === 'assign'">
+          <?!= include('assign') ?>
+        </div>
+
         <!-- Page: Map -->
         <div x-show="page === 'map'">
           <?!= include('map') ?>
@@ -225,7 +230,7 @@
         </div>
 
         <!-- Page: อื่นๆ (placeholder) -->
-        <div x-show="!['dashboard','patients','visits','assessment','map','reports','settings'].includes(page)" class="card text-center py-16">
+        <div x-show="!['dashboard','patients','visits','assessment','assign','map','reports','settings'].includes(page)" class="card text-center py-16">
           <div class="text-5xl mb-3">🚧</div>
           <h3 class="font-bold text-slate-700" x-text="pageTitle()"></h3>
           <p class="text-sm text-slate-500 mt-2">หน้านี้กำลังพัฒนาในเฟสถัดไป</p>
