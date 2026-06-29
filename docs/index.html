@@ -1778,7 +1778,7 @@ function visitForm() {
     visitNo: null,
     saving: false,
     loading: true,
-    form: this.blankForm(),
+    form: {},
     photos: [],         // {name, mime, dataUrl}
     pdpaConsent: false,
 
@@ -1798,6 +1798,7 @@ function visitForm() {
     },
 
     async init() {
+      this.form = this.blankForm();
       // อัตโนมัติเติม visitor จาก user ที่ login
       this.form.VisitorID = window.LTCApp.user?.userId || '';
       this.form.VisitorName = window.LTCApp.user?.fullName || window.LTCApp.user?.username || '';
