@@ -436,6 +436,7 @@ function caseForm() {
     },
 
     async loadPatients() {
+      if (!window.LTCApp?.token) { this.loading = false; return; }   // ยังไม่ login → ไม่ดึง
       this.loading = true;
       try {
         const r = await rpc('api_getPatients', window.LTCApp.token, {});
@@ -448,6 +449,7 @@ function caseForm() {
     },
 
     async loadUsers() {
+      if (!window.LTCApp?.token) return;   // ยังไม่ login → ไม่ดึง
       try {
         const r = await rpc('api_getCaregivers', window.LTCApp.token);
         if (r.success) this.usersList = r.data || [];

@@ -327,6 +327,7 @@ function visitForm() {
     },
 
     async loadPatients() {
+      if (!window.LTCApp?.token) { this.loading = false; return; }   // ยังไม่ login → ไม่ดึง
       this.loading = true;
       try {
         // Backend (getPatients → _filterByRole_) กรองให้ CG เห็นเฉพาะที่ assign อยู่แล้ว
