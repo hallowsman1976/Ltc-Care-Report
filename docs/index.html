@@ -4263,11 +4263,10 @@ function app() {
       // เปิดเผย root component proxy ให้ component ย่อยเข้าถึง (แทน $root ที่คืน DOM element)
       window.LTCApp = this;
 
-      // โหลด appConfig (ไม่ต้อง auth)
-      try {
-        const r = await rpc('api_getAppConfig');
-        if (r.success) this.appConfig = r.data.settings || {};
-      } catch (e) { /* silent */ }
+      // โหลด appConfig แบบไม่บล็อก (ใช้แค่โชว์ชื่อองค์กร) — รันคู่ขนานกับ session check
+      rpc('api_getAppConfig')
+        .then(r => { if (r && r.success) this.appConfig = r.data.settings || {}; })
+        .catch(() => {});
 
       // ตรวจ session เดิม
       const saved = sessionStorage.getItem('ltc_token');
@@ -4277,7 +4276,7 @@ function app() {
           const r = await rpc('api_getCurrentUser', saved);
           if (r.success && r.data) {
             this.user = r.data;
-            await this.loadDashboard();
+            this.loadDashboard();   // ไม่ await — ให้ UI เข้าหน้าหลักทันที (มี skeleton)
           } else {
             this.clearSession();
           }
@@ -4292,15 +4291,15 @@ function app() {
       this.loginLoading = true;
       try {
         const r = await rpc('api_login', this.loginForm.username, this.loginForm.password);
-        if (!r.success) { this.loginError = r.message; return; }
+        if (!r.success) { this.loginError = r.message; this.loginLoading = false; return; }
         this.token = r.data.token;
         this.user  = r.data.user;
         sessionStorage.setItem('ltc_token', this.token);
+        this.loginLoading = false;        // ปลดสปินเนอร์ทันทีที่ auth ผ่าน
         showSuccess('เข้าสู่ระบบสำเร็จ');
-        await this.loadDashboard();
+        this.loadDashboard();             // ไม่ await — โหลดพื้นหลัง (มี skeleton)
       } catch (e) {
         this.loginError = (e && e.message) ? e.message : 'เข้าสู่ระบบไม่สำเร็จ';
-      } finally {
         this.loginLoading = false;
       }
     },
@@ -4308,8 +4307,9 @@ function app() {
     async logout() {
       const ok = await showConfirm('ออกจากระบบ?', 'ท่านต้องการออกจากระบบใช่หรือไม่?');
       if (!ok) return;
-      try { await rpc('api_logout', this.token); } catch (e) {}
-      this.clearSession();
+      const t = this.token;
+      this.clearSession();                // ออกทันที (optimistic) — ไม่รอ server
+      rpc('api_logout', t).catch(() => {}); // เคลียร์ session ฝั่ง server แบบพื้นหลัง
     },
 
     clearSession() {
