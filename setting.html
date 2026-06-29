@@ -70,6 +70,29 @@
           <p class="text-xs text-slate-400 mt-1">หากเว้นว่าง ระบบจะสร้างโฟลเดอร์ใหม่อัตโนมัติเมื่ออัปโหลดรูปครั้งแรก</p>
         </div>
       </div>
+      <!-- แผนที่เริ่มต้น -->
+      <div class="mt-5 pt-4 border-t">
+        <div class="section-title">🗺️ แผนที่เริ่มต้น</div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="form-label">Latitude เริ่มต้น</label>
+            <input type="text" x-model="s.MAP_DEFAULT_LAT" class="form-input font-mono text-sm" placeholder="13.736717">
+          </div>
+          <div>
+            <label class="form-label">Longitude เริ่มต้น</label>
+            <input type="text" x-model="s.MAP_DEFAULT_LNG" class="form-input font-mono text-sm" placeholder="100.523186">
+          </div>
+          <div>
+            <label class="form-label">ระดับซูม (3–18)</label>
+            <input type="number" min="3" max="18" x-model="s.MAP_DEFAULT_ZOOM" class="form-input" placeholder="12">
+          </div>
+        </div>
+        <div class="mt-3">
+          <button type="button" @click="useCurrentLocation()" class="btn btn-outline btn-sm">📍 ใช้พิกัดปัจจุบัน (GPS)</button>
+          <p class="text-xs text-slate-400 mt-1">ใช้เป็นจุดกึ่งกลางแผนที่เมื่อยังไม่มีพิกัดเคส · อย่าลืมกดบันทึก</p>
+        </div>
+      </div>
+
       <div class="mt-4 pt-4 border-t">
         <button @click="save()" class="btn btn-primary" :disabled="saving">
           <span x-text="saving?'⏳ บันทึก...':'💾 บันทึกการตั้งค่า'"></span>
@@ -589,6 +612,22 @@ function settingView() {
     },
     roleBadge(role) {
       return ({ admin:'badge-red', cm:'badge-blue', cg:'badge-green', viewer:'badge-gray' })[role] || 'badge-gray';
+    },
+
+    // ── แผนที่เริ่มต้น: ดึงพิกัด GPS ปัจจุบัน ──
+    useCurrentLocation() {
+      if (!navigator.geolocation) { showError('อุปกรณ์นี้ไม่รองรับ GPS'); return; }
+      Swal.fire({ title: '📍 กำลังขอตำแหน่ง...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          this.s.MAP_DEFAULT_LAT = pos.coords.latitude.toFixed(6);
+          this.s.MAP_DEFAULT_LNG = pos.coords.longitude.toFixed(6);
+          Swal.fire({ icon: 'success', title: 'ได้พิกัดแล้ว',
+            html: `Lat: <b>${this.s.MAP_DEFAULT_LAT}</b><br>Lng: <b>${this.s.MAP_DEFAULT_LNG}</b><br><span style="font-size:12px;color:#86868b">กด "บันทึกการตั้งค่า" เพื่อใช้งาน</span>` });
+        },
+        err => Swal.fire({ icon: 'error', title: 'ไม่สามารถรับ GPS ได้', text: err.message }),
+        { enableHighAccuracy: true, timeout: 15000 }
+      );
     },
 
     // ── Import (CSV) ──

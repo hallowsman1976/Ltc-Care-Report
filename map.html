@@ -144,7 +144,7 @@ function mapView() {
       if (bounds.length) {
         this._map.fitBounds(bounds, { padding: [40,40], maxZoom: 16 });
       } else if (center) {
-        this._map.setView([center.lat, center.lng], 12);
+        this._map.setView([center.lat, center.lng], center.zoom || 12);
       }
     },
 

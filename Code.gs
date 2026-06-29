@@ -123,6 +123,7 @@ const DEFAULT_SETTINGS = [
   { key:'LINE_NOTIFY_TOKEN',    value:'',                              type:'text',    desc:'LINE Notify Token' },
   { key:'MAP_DEFAULT_LAT',      value:'13.736717',                     type:'number',  desc:'Latitude เริ่มต้น' },
   { key:'MAP_DEFAULT_LNG',      value:'100.523186',                    type:'number',  desc:'Longitude เริ่มต้น' },
+  { key:'MAP_DEFAULT_ZOOM',     value:'12',                            type:'number',  desc:'ระดับซูมแผนที่เริ่มต้น (3–18)' },
   { key:'APP_VERSION',          value:APP_VERSION,                     type:'text',    desc:'เวอร์ชันระบบ' },
   // ── Phase 7: Map / Photo / LINE Messaging / Report ──
   { key:'APP_NAME',                 value:APP_NAME,   type:'text',   desc:'ชื่อแอปพลิเคชัน' },

@@ -143,6 +143,7 @@ function getMapCases(filters) {
         lng: parseFloat(getSettingValue_('MAP_DEFAULT_LNG', '100.523186'))
       };
     }
+    center.zoom = parseInt(getSettingValue_('MAP_DEFAULT_ZOOM', '12'), 10) || 12;
 
     // ── filter options ──
     const villages = [...new Set(patients
