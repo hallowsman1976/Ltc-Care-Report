@@ -395,7 +395,7 @@ function caseForm() {
     showDetail: false,
     editingId: null,
     saving: false,
-    form: this.blankForm(),
+    form: {},
     cidStatus: { valid: null, msg: '' },
     pdpaConsent: false,
     detail: null,
@@ -417,6 +417,7 @@ function caseForm() {
     },
 
     async init() {
+      this.form = this.blankForm();
       await Promise.all([this.loadPatients(), this.loadUsers()]);
     },
 
