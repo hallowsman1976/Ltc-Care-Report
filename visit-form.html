@@ -45,6 +45,17 @@
         </template>
       </div>
     </div>
+
+    <!-- สถานะรายชื่อ -->
+    <p x-show="loading" class="mt-2 text-xs text-slate-400">⏳ กำลังโหลดรายชื่อ...</p>
+    <p x-show="!loading && !patients.length"
+       class="mt-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+      ⚠️ ยังไม่มีผู้รับบริการที่ได้รับมอบหมายให้คุณ — กรุณาให้ผู้ดูแลระบบมอบหมายผ่านเมนู "มอบหมายงาน"
+    </p>
+    <p x-show="!loading && patients.length" class="mt-2 text-xs text-slate-400">
+      อยู่ในความดูแลของคุณ <span class="font-semibold text-primary-700" x-text="patients.length"></span> ราย
+      · คลิกช่องด้านบนเพื่อเลือก
+    </p>
   </div>
 
   <!-- ── 2. Patient Summary ── -->
