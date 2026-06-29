@@ -494,7 +494,13 @@ function api_getVisitOptions(token) {
   _CURRENT_TOKEN_ = token;
   try {
     requireAuth_();
-    const sh = SpreadsheetApp.getActive().getSheetByName(SHEET_NAMES.SYMPTOM);
+    const ss = SpreadsheetApp.getActive();
+    let sh = ss.getSheetByName(SHEET_NAMES.SYMPTOM);
+    // ถ้าไม่มี/ว่าง → หาชีตที่ชื่อคล้าย symptom/symtom (เผื่อสะกดต่าง/พิมพ์เล็กใหญ่)
+    if (!sh || sh.getLastRow() < 2) {
+      const alt = ss.getSheets().filter(s => /symp?tom/i.test(s.getName()) && s.getLastRow() >= 2);
+      if (alt.length) sh = alt[0];
+    }
     if (!sh) return okResult({ symptoms: [], care: [], education: [] }, 'ยังไม่มีชีต Symptom');
     const lastRow = sh.getLastRow();
     if (lastRow < 2) return okResult({ symptoms: [], care: [], education: [] }, 'ยังไม่มีข้อมูลตัวเลือก');
