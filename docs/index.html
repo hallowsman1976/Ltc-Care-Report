@@ -1130,7 +1130,7 @@ function caseForm() {
     },
 
     get canCreate() {
-      const r = this.$root.user?.role;
+      const r = window.LTCApp.user?.role;
       return r === 'admin' || r === 'cm';
     },
 
@@ -1141,7 +1141,7 @@ function caseForm() {
     async loadPatients() {
       this.loading = true;
       try {
-        const r = await rpc('api_getPatients', this.$root.token, {});
+        const r = await rpc('api_getPatients', window.LTCApp.token, {});
         if (!r.success) { showError(r.message); return; }
         this.patients = r.data || [];
         this.applyFilter();
@@ -1152,7 +1152,7 @@ function caseForm() {
 
     async loadUsers() {
       try {
-        const r = await rpc('api_getCaregivers', this.$root.token);
+        const r = await rpc('api_getCaregivers', window.LTCApp.token);
         if (r.success) this.usersList = r.data || [];
       } catch (e) {}
     },
@@ -1265,8 +1265,8 @@ function caseForm() {
 
         const fn = this.editingId ? 'api_updatePatient' : 'api_savePatient';
         const args = this.editingId
-          ? [this.$root.token, this.editingId, payload]
-          : [this.$root.token, payload];
+          ? [window.LTCApp.token, this.editingId, payload]
+          : [window.LTCApp.token, payload];
         const r = await rpc(fn, ...args);
         if (!r.success) { showError(r.message); return; }
         showSuccess(r.message || 'บันทึกสำเร็จ');
@@ -1281,7 +1281,7 @@ function caseForm() {
       this.detail = { patient: p, timeline: [] };
       this.showDetail = true;
       try {
-        const r = await rpc('api_getPatientTimeline', this.$root.token, p.PatientID);
+        const r = await rpc('api_getPatientTimeline', window.LTCApp.token, p.PatientID);
         if (r.success) this.detail = r.data;
       } catch (e) {
         showError(e.message || 'โหลด timeline ไม่สำเร็จ');
@@ -1341,7 +1341,7 @@ function caseForm() {
               .filter(s => s).join(' ') || '-';
     },
 
-    formatThaiDate(iso) { return this.$root.formatThaiDate(iso); }
+    formatThaiDate(iso) { return window.LTCApp.formatThaiDate(iso); }
   };
 }
 </script>
@@ -1656,15 +1656,15 @@ function visitForm() {
 
     async init() {
       // อัตโนมัติเติม visitor จาก user ที่ login
-      this.form.VisitorID = this.$root.user?.userId || '';
-      this.form.VisitorName = this.$root.user?.fullName || this.$root.user?.username || '';
+      this.form.VisitorID = window.LTCApp.user?.userId || '';
+      this.form.VisitorName = window.LTCApp.user?.fullName || window.LTCApp.user?.username || '';
       await this.loadPatients();
     },
 
     async loadPatients() {
       this.loading = true;
       try {
-        const r = await rpc('api_getPatients', this.$root.token, {});
+        const r = await rpc('api_getPatients', window.LTCApp.token, {});
         if (!r.success) { showError(r.message); return; }
         this.patients = r.data || [];
         this.filteredPatients = [...this.patients];
@@ -1690,7 +1690,7 @@ function visitForm() {
       this.showDropdown = false;
       // คำนวณ VisitNo อัตโนมัติ
       try {
-        const r = await rpc('api_calculateVisitNo', this.$root.token, p.PatientID);
+        const r = await rpc('api_calculateVisitNo', window.LTCApp.token, p.PatientID);
         if (r.success) this.visitNo = r.data.visitNo;
       } catch (e) { this.visitNo = '?'; }
     },
@@ -1757,7 +1757,7 @@ function visitForm() {
       let ok = 0;
       for (const ph of this.photos) {
         try {
-          const r = await rpc('api_uploadPhoto', this.$root.token,
+          const r = await rpc('api_uploadPhoto', window.LTCApp.token,
             ph.dataUrl, ph.name, this.selectedPatient.PatientID, visitId, '', true);
           if (r.success) ok++;
         } catch (e) { /* นับเฉพาะที่สำเร็จ */ }
@@ -1799,7 +1799,7 @@ function visitForm() {
       this.saving = true;
       try {
         const payload = { ...this.form, PatientID: this.selectedPatient.PatientID };
-        const r = await rpc('api_saveVisit', this.$root.token, payload);
+        const r = await rpc('api_saveVisit', window.LTCApp.token, payload);
         if (!r.success) { showError(r.message); return; }
 
         // ── อัปโหลดรูปที่แนบไว้ (ถ้ามี) ──
@@ -1820,7 +1820,7 @@ function visitForm() {
           confirmButtonColor:'#1d4ed8'
         }).then(res => {
           if (res.isConfirmed) {
-            this.$root.showPage('assessment');
+            window.LTCApp.showPage('assessment');
           } else {
             this.resetPatient();
           }
@@ -1846,7 +1846,7 @@ function visitForm() {
               p.Province?'จ.'+p.Province:''].filter(s=>s).join(' ') || '-';
     },
 
-    formatDate(d) { return this.$root.formatThaiDate(d); }
+    formatDate(d) { return window.LTCApp.formatThaiDate(d); }
   };
 }
 </script>
@@ -2262,7 +2262,7 @@ function visitForm() {
                 <div>
                   <label class="form-label text-xs">ผู้ให้บริการ</label>
                   <input type="text"
-                         :value="getBenefitItem(item.id)?.provider || $root.user?.fullName || ''"
+                         :value="getBenefitItem(item.id)?.provider || LTCApp.user?.fullName || ''"
                          @input="updateBenefitItem(item.id, 'provider', $event.target.value)"
                          class="form-input" placeholder="ชื่อผู้ให้บริการ">
                 </div>
@@ -2387,13 +2387,13 @@ function assessmentForm() {
     async init() {
       // โหลดผู้ป่วย
       try {
-        const r = await rpc('api_getPatients', this.$root.token, {});
+        const r = await rpc('api_getPatients', window.LTCApp.token, {});
         if (r.success) this.patients = r.data || [];
       } catch (e) { showError(e.message); }
 
       // โหลด benefit items
       try {
-        const r = await rpc('api_getBenefitItems', this.$root.token);
+        const r = await rpc('api_getBenefitItems', window.LTCApp.token);
         if (r.success) { this.benefitItems = r.data.items; this.benefitGroups = r.data.groups; }
       } catch (e) {}
 
@@ -2420,7 +2420,7 @@ function assessmentForm() {
       this.visits = [];
       if (!this.selectedPatientId) return;
       try {
-        const r = await rpc('api_getVisitsByPatient', this.$root.token, this.selectedPatientId);
+        const r = await rpc('api_getVisitsByPatient', window.LTCApp.token, this.selectedPatientId);
         if (r.success) {
           this.visits = r.data || [];
           // เลือก visit ล่าสุดอัตโนมัติ
@@ -2513,7 +2513,7 @@ function assessmentForm() {
       if (idx >= 0) this.benefit.ServiceItems.splice(idx, 1);
       else this.benefit.ServiceItems.push({
         id: item.id, name: item.name, group: item.group, unit: item.unit,
-        quantity: 1, provider: this.$root.user?.fullName||'', notes: ''
+        quantity: 1, provider: window.LTCApp.user?.fullName||'', notes: ''
       });
     },
     updateBenefitItem(id, field, value) {
@@ -2531,7 +2531,7 @@ function assessmentForm() {
       if (!await this._confirmSave_('บันทึกสัญญาณชีพ?')) return;
       this.saving = true;
       try {
-        const r = await rpc('api_saveVitalSigns', this.$root.token, { ...this.vital, VisitID: this.selectedVisitId });
+        const r = await rpc('api_saveVitalSigns', window.LTCApp.token, { ...this.vital, VisitID: this.selectedVisitId });
         if (!r.success) { showError(r.message); return; }
         showSuccess(r.message || 'บันทึกสำเร็จ');
         this.next();
@@ -2544,7 +2544,7 @@ function assessmentForm() {
       if (!await this._confirmSave_('บันทึก ADL = ' + this.adlTotal + ' / 20?')) return;
       this.saving = true;
       try {
-        const r = await rpc('api_saveADL', this.$root.token,
+        const r = await rpc('api_saveADL', window.LTCApp.token,
           { ...this.adl, VisitID: this.selectedVisitId, HasCognitiveImpairment: false });
         if (!r.success) { showError(r.message); return; }
         showSuccess(r.message);
@@ -2559,7 +2559,7 @@ function assessmentForm() {
       if (!await this._confirmSave_('บันทึก PPS = ' + this.pps.PPSScore + '%?')) return;
       this.saving = true;
       try {
-        const r = await rpc('api_savePPS', this.$root.token, { ...this.pps, VisitID: this.selectedVisitId });
+        const r = await rpc('api_savePPS', window.LTCApp.token, { ...this.pps, VisitID: this.selectedVisitId });
         if (!r.success) { showError(r.message); return; }
         showSuccess(r.message);
         this.next();
@@ -2583,7 +2583,7 @@ function assessmentForm() {
       if (!await this._confirmSave_('บันทึก '+type+' = '+(type==='2Q'?this.q2Total:this.q9Total)+' คะแนน?')) return;
       this.saving = true;
       try {
-        const r = await rpc('api_saveMentalHealth', this.$root.token, payload);
+        const r = await rpc('api_saveMentalHealth', window.LTCApp.token, payload);
         if (!r.success) { showError(r.message); return; }
         if (r.data?.highRisk) {
           Swal.fire({ icon:'warning', title:'⚠️ ตรวจพบความเสี่ยงสูง',
@@ -2603,7 +2603,7 @@ function assessmentForm() {
       if (!await this._confirmSave_('บันทึกรายงานบริการ '+this.benefit.ServiceItems.length+' รายการ?')) return;
       this.saving = true;
       try {
-        const r = await rpc('api_saveBenefitReport', this.$root.token, {
+        const r = await rpc('api_saveBenefitReport', window.LTCApp.token, {
           PatientID: this.selectedPatientId,
           FiscalYear: this.benefit.FiscalYear,
           ReportMonth: this.benefit.ReportMonth,
@@ -2613,7 +2613,7 @@ function assessmentForm() {
         if (!r.success) { showError(r.message); return; }
         Swal.fire({ icon:'success', title:'🎉 ทำแบบประเมินครบแล้ว!',
                     text:r.message, confirmButtonText:'กลับหน้าหลัก' })
-            .then(()=> this.$root.showPage('dashboard'));
+            .then(()=> window.LTCApp.showPage('dashboard'));
       } catch (e) { showError(e.message); }
       finally { this.saving = false; }
     },
@@ -2627,7 +2627,7 @@ function assessmentForm() {
       const v = this.visits.find(x => x.VisitID === this.selectedVisitId);
       return v ? ('ครั้งที่ ' + v.VisitNo + ' · ' + this.formatDate(v.VisitDate)) : '-';
     },
-    formatDate(d) { return this.$root.formatThaiDate(d); },
+    formatDate(d) { return window.LTCApp.formatThaiDate(d); },
     thaiMonth(m) {
       return ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.',
               'ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][m];
@@ -2734,7 +2734,7 @@ function mapView() {
         }
       });
       // ถ้าเปิดหน้า map อยู่แล้ว
-      if (this.$root.page === 'map') {
+      if (window.LTCApp.page === 'map') {
         this.$nextTick(() => { this.ensureMap(); this.loadCases(); });
       } else {
         this.loading = false;
@@ -2755,7 +2755,7 @@ function mapView() {
     async loadCases() {
       this.loading = true;
       try {
-        const r = await rpc('api_getMapCases', this.$root.token, this.filter);
+        const r = await rpc('api_getMapCases', window.LTCApp.token, this.filter);
         if (!r.success) { showError(r.message); return; }
         this.cases = r.data.cases || [];
         this.counts = r.data.counts || {};
@@ -3013,9 +3013,9 @@ function reportView() {
     orgName: '',
 
     async init() {
-      this.orgName = this.$root.appConfig?.ORG_NAME || '';
+      this.orgName = window.LTCApp.appConfig?.ORG_NAME || '';
       try {
-        const r = await rpc('api_getPatients', this.$root.token, {});
+        const r = await rpc('api_getPatients', window.LTCApp.token, {});
         if (r.success) {
           this.patients = r.data || [];
           this.villages = [...new Set(this.patients.map(p => p.VillageName || (p.VillageNo?'ม.'+p.VillageNo:'')).filter(v=>v))].sort();
@@ -3039,7 +3039,7 @@ function reportView() {
       if (this.reportType === 'individual') return; // ใช้ loadIndividual
       this.loading = true; this.fetched = false;
       try {
-        const r = await rpc('api_exportReport', this.$root.token, this.reportType, this.filter);
+        const r = await rpc('api_exportReport', window.LTCApp.token, this.reportType, this.filter);
         if (!r.success) { showError(r.message); return; }
         this.columns = r.data.columns || [];
         this.rows = r.data.rows || [];
@@ -3053,7 +3053,7 @@ function reportView() {
       if (!this.selectedPatientId) { this.individual = null; return; }
       this.loading = true;
       try {
-        const r = await rpc('api_getIndividualReport', this.$root.token, this.selectedPatientId);
+        const r = await rpc('api_getIndividualReport', window.LTCApp.token, this.selectedPatientId);
         if (!r.success) { showError(r.message); return; }
         this.individual = r.data;
       } catch (e) {
@@ -3083,7 +3083,7 @@ function reportView() {
     thaiMonth(m) {
       return ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][m];
     },
-    fmt(d) { return this.$root.formatThaiDate(d); }
+    fmt(d) { return window.LTCApp.formatThaiDate(d); }
   };
 }
 </script>
@@ -3105,13 +3105,13 @@ function reportView() {
   </div>
 
   <!-- Not admin -->
-  <div x-show="$root.user?.role !== 'admin'" class="card text-center py-12">
+  <div x-show="LTCApp.user?.role !== 'admin'" class="card text-center py-12">
     <div class="text-5xl mb-3">🔒</div>
     <h3 class="font-bold text-slate-700">เฉพาะผู้ดูแลระบบ</h3>
     <p class="text-sm text-slate-500 mt-2">ท่านไม่มีสิทธิ์เข้าถึงหน้านี้</p>
   </div>
 
-  <div x-show="$root.user?.role === 'admin'">
+  <div x-show="LTCApp.user?.role === 'admin'">
     <!-- Tabs -->
     <div class="flex gap-2 mb-4 border-b border-slate-200">
       <button @click="tab='general'" :class="tab==='general'?'border-primary-600 text-primary-700':'border-transparent text-slate-500'"
@@ -3279,7 +3279,7 @@ function settingView() {
         if (e.detail === 'settings') this.ensureLoaded();
       });
       // ถ้าเปิดหน้า settings อยู่แล้ว (เช่น login แล้วอยู่หน้านี้)
-      if (this.$root.page === 'settings') {
+      if (window.LTCApp.page === 'settings') {
         this.ensureLoaded();
       } else {
         this.loading = false;
@@ -3289,7 +3289,7 @@ function settingView() {
     /** ensureLoaded() — โหลด settings ครั้งเดียวเมื่อเป็น admin */
     async ensureLoaded() {
       if (this._loaded) return;
-      if (this.$root.user?.role !== 'admin') { this.loading = false; return; }
+      if (window.LTCApp.user?.role !== 'admin') { this.loading = false; return; }
       this._loaded = true;
       await this.load();
     },
@@ -3297,7 +3297,7 @@ function settingView() {
     async load() {
       this.loading = true;
       try {
-        const r = await rpc('api_getSettings', this.$root.token);
+        const r = await rpc('api_getSettings', window.LTCApp.token);
         if (!r.success) { showError(r.message); return; }
         this.s = r.data.settings || {};
         this.masked = r.data.masked || {};
@@ -3311,7 +3311,7 @@ function settingView() {
       if (!ok) return;
       this.saving = true;
       try {
-        const r = await rpc('api_saveSettings', this.$root.token, this.s);
+        const r = await rpc('api_saveSettings', window.LTCApp.token, this.s);
         if (!r.success) { showError(r.message); return; }
         showSuccess(r.message);
         // โหลดใหม่เพื่อ mask token อีกครั้ง
@@ -3324,7 +3324,7 @@ function settingView() {
     async testLine() {
       this.testing = true;
       try {
-        const r = await rpc('api_sendLineAlert', this.$root.token,
+        const r = await rpc('api_sendLineAlert', window.LTCApp.token,
           '🔔 ทดสอบการแจ้งเตือนจากระบบ ' + (this.s.APP_NAME||'LTC Care Report'), '');
         if (r.success) showSuccess('ส่งข้อความทดสอบสำเร็จ');
         else showError(r.message);
@@ -3337,7 +3337,7 @@ function settingView() {
       if (!ok) return;
       this.notifying = true;
       try {
-        const r = await rpc(fnName, this.$root.token);
+        const r = await rpc(fnName, window.LTCApp.token);
         if (r.success) {
           Swal.fire({ icon:'success', title:'ส่งแล้ว', text: r.message });
           this.loadNotifications();
@@ -3350,7 +3350,7 @@ function settingView() {
       if (!this.customMsg) return;
       this.notifying = true;
       try {
-        const r = await rpc('api_sendLineAlert', this.$root.token, this.customMsg, '');
+        const r = await rpc('api_sendLineAlert', window.LTCApp.token, this.customMsg, '');
         if (r.success) { showSuccess('ส่งสำเร็จ'); this.customMsg=''; this.loadNotifications(); }
         else showError(r.message);
       } catch (e) { showError(e.message); }
@@ -3359,7 +3359,7 @@ function settingView() {
 
     async loadNotifications() {
       try {
-        const r = await rpc('api_getNotifications', this.$root.token, 100);
+        const r = await rpc('api_getNotifications', window.LTCApp.token, 100);
         if (r.success) this.notifications = r.data || [];
       } catch (e) {}
     },
@@ -3368,7 +3368,7 @@ function settingView() {
       const ok = await showConfirm('ส่งซ้ำ?', 'ระบบจะส่งข้อความนี้อีกครั้ง');
       if (!ok) return;
       try {
-        const r = await rpc('api_resendNotification', this.$root.token, id);
+        const r = await rpc('api_resendNotification', window.LTCApp.token, id);
         if (r.success) { showSuccess('ส่งซ้ำสำเร็จ'); this.loadNotifications(); }
         else showError(r.message);
       } catch (e) { showError(e.message); }
@@ -3539,6 +3539,9 @@ function app() {
     // ── Init / Auth ─────────────────────────────────────────────
     // ============================================================
     async init() {
+      // เปิดเผย root component proxy ให้ component ย่อยเข้าถึง (แทน $root ที่คืน DOM element)
+      window.LTCApp = this;
+
       // โหลด appConfig (ไม่ต้อง auth)
       try {
         const r = await rpc('api_getAppConfig');

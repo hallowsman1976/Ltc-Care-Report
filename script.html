@@ -114,6 +114,9 @@ function app() {
     // ── Init / Auth ─────────────────────────────────────────────
     // ============================================================
     async init() {
+      // เปิดเผย root component proxy ให้ component ย่อยเข้าถึง (แทน $root ที่คืน DOM element)
+      window.LTCApp = this;
+
       // โหลด appConfig (ไม่ต้อง auth)
       try {
         const r = await rpc('api_getAppConfig');

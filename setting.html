@@ -11,13 +11,13 @@
   </div>
 
   <!-- Not admin -->
-  <div x-show="$root.user?.role !== 'admin'" class="card text-center py-12">
+  <div x-show="LTCApp.user?.role !== 'admin'" class="card text-center py-12">
     <div class="text-5xl mb-3">🔒</div>
     <h3 class="font-bold text-slate-700">เฉพาะผู้ดูแลระบบ</h3>
     <p class="text-sm text-slate-500 mt-2">ท่านไม่มีสิทธิ์เข้าถึงหน้านี้</p>
   </div>
 
-  <div x-show="$root.user?.role === 'admin'">
+  <div x-show="LTCApp.user?.role === 'admin'">
     <!-- Tabs -->
     <div class="flex gap-2 mb-4 border-b border-slate-200">
       <button @click="tab='general'" :class="tab==='general'?'border-primary-600 text-primary-700':'border-transparent text-slate-500'"
@@ -185,7 +185,7 @@ function settingView() {
         if (e.detail === 'settings') this.ensureLoaded();
       });
       // ถ้าเปิดหน้า settings อยู่แล้ว (เช่น login แล้วอยู่หน้านี้)
-      if (this.$root.page === 'settings') {
+      if (window.LTCApp.page === 'settings') {
         this.ensureLoaded();
       } else {
         this.loading = false;
@@ -195,7 +195,7 @@ function settingView() {
     /** ensureLoaded() — โหลด settings ครั้งเดียวเมื่อเป็น admin */
     async ensureLoaded() {
       if (this._loaded) return;
-      if (this.$root.user?.role !== 'admin') { this.loading = false; return; }
+      if (window.LTCApp.user?.role !== 'admin') { this.loading = false; return; }
       this._loaded = true;
       await this.load();
     },
@@ -203,7 +203,7 @@ function settingView() {
     async load() {
       this.loading = true;
       try {
-        const r = await rpc('api_getSettings', this.$root.token);
+        const r = await rpc('api_getSettings', window.LTCApp.token);
         if (!r.success) { showError(r.message); return; }
         this.s = r.data.settings || {};
         this.masked = r.data.masked || {};
@@ -217,7 +217,7 @@ function settingView() {
       if (!ok) return;
       this.saving = true;
       try {
-        const r = await rpc('api_saveSettings', this.$root.token, this.s);
+        const r = await rpc('api_saveSettings', window.LTCApp.token, this.s);
         if (!r.success) { showError(r.message); return; }
         showSuccess(r.message);
         // โหลดใหม่เพื่อ mask token อีกครั้ง
@@ -230,7 +230,7 @@ function settingView() {
     async testLine() {
       this.testing = true;
       try {
-        const r = await rpc('api_sendLineAlert', this.$root.token,
+        const r = await rpc('api_sendLineAlert', window.LTCApp.token,
           '🔔 ทดสอบการแจ้งเตือนจากระบบ ' + (this.s.APP_NAME||'LTC Care Report'), '');
         if (r.success) showSuccess('ส่งข้อความทดสอบสำเร็จ');
         else showError(r.message);
@@ -243,7 +243,7 @@ function settingView() {
       if (!ok) return;
       this.notifying = true;
       try {
-        const r = await rpc(fnName, this.$root.token);
+        const r = await rpc(fnName, window.LTCApp.token);
         if (r.success) {
           Swal.fire({ icon:'success', title:'ส่งแล้ว', text: r.message });
           this.loadNotifications();
@@ -256,7 +256,7 @@ function settingView() {
       if (!this.customMsg) return;
       this.notifying = true;
       try {
-        const r = await rpc('api_sendLineAlert', this.$root.token, this.customMsg, '');
+        const r = await rpc('api_sendLineAlert', window.LTCApp.token, this.customMsg, '');
         if (r.success) { showSuccess('ส่งสำเร็จ'); this.customMsg=''; this.loadNotifications(); }
         else showError(r.message);
       } catch (e) { showError(e.message); }
@@ -265,7 +265,7 @@ function settingView() {
 
     async loadNotifications() {
       try {
-        const r = await rpc('api_getNotifications', this.$root.token, 100);
+        const r = await rpc('api_getNotifications', window.LTCApp.token, 100);
         if (r.success) this.notifications = r.data || [];
       } catch (e) {}
     },
@@ -274,7 +274,7 @@ function settingView() {
       const ok = await showConfirm('ส่งซ้ำ?', 'ระบบจะส่งข้อความนี้อีกครั้ง');
       if (!ok) return;
       try {
-        const r = await rpc('api_resendNotification', this.$root.token, id);
+        const r = await rpc('api_resendNotification', window.LTCApp.token, id);
         if (r.success) { showSuccess('ส่งซ้ำสำเร็จ'); this.loadNotifications(); }
         else showError(r.message);
       } catch (e) { showError(e.message); }

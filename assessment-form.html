@@ -405,7 +405,7 @@
                 <div>
                   <label class="form-label text-xs">ผู้ให้บริการ</label>
                   <input type="text"
-                         :value="getBenefitItem(item.id)?.provider || $root.user?.fullName || ''"
+                         :value="getBenefitItem(item.id)?.provider || LTCApp.user?.fullName || ''"
                          @input="updateBenefitItem(item.id, 'provider', $event.target.value)"
                          class="form-input" placeholder="ชื่อผู้ให้บริการ">
                 </div>
@@ -530,13 +530,13 @@ function assessmentForm() {
     async init() {
       // โหลดผู้ป่วย
       try {
-        const r = await rpc('api_getPatients', this.$root.token, {});
+        const r = await rpc('api_getPatients', window.LTCApp.token, {});
         if (r.success) this.patients = r.data || [];
       } catch (e) { showError(e.message); }
 
       // โหลด benefit items
       try {
-        const r = await rpc('api_getBenefitItems', this.$root.token);
+        const r = await rpc('api_getBenefitItems', window.LTCApp.token);
         if (r.success) { this.benefitItems = r.data.items; this.benefitGroups = r.data.groups; }
       } catch (e) {}
 
@@ -563,7 +563,7 @@ function assessmentForm() {
       this.visits = [];
       if (!this.selectedPatientId) return;
       try {
-        const r = await rpc('api_getVisitsByPatient', this.$root.token, this.selectedPatientId);
+        const r = await rpc('api_getVisitsByPatient', window.LTCApp.token, this.selectedPatientId);
         if (r.success) {
           this.visits = r.data || [];
           // เลือก visit ล่าสุดอัตโนมัติ
@@ -656,7 +656,7 @@ function assessmentForm() {
       if (idx >= 0) this.benefit.ServiceItems.splice(idx, 1);
       else this.benefit.ServiceItems.push({
         id: item.id, name: item.name, group: item.group, unit: item.unit,
-        quantity: 1, provider: this.$root.user?.fullName||'', notes: ''
+        quantity: 1, provider: window.LTCApp.user?.fullName||'', notes: ''
       });
     },
     updateBenefitItem(id, field, value) {
@@ -674,7 +674,7 @@ function assessmentForm() {
       if (!await this._confirmSave_('บันทึกสัญญาณชีพ?')) return;
       this.saving = true;
       try {
-        const r = await rpc('api_saveVitalSigns', this.$root.token, { ...this.vital, VisitID: this.selectedVisitId });
+        const r = await rpc('api_saveVitalSigns', window.LTCApp.token, { ...this.vital, VisitID: this.selectedVisitId });
         if (!r.success) { showError(r.message); return; }
         showSuccess(r.message || 'บันทึกสำเร็จ');
         this.next();
@@ -687,7 +687,7 @@ function assessmentForm() {
       if (!await this._confirmSave_('บันทึก ADL = ' + this.adlTotal + ' / 20?')) return;
       this.saving = true;
       try {
-        const r = await rpc('api_saveADL', this.$root.token,
+        const r = await rpc('api_saveADL', window.LTCApp.token,
           { ...this.adl, VisitID: this.selectedVisitId, HasCognitiveImpairment: false });
         if (!r.success) { showError(r.message); return; }
         showSuccess(r.message);
@@ -702,7 +702,7 @@ function assessmentForm() {
       if (!await this._confirmSave_('บันทึก PPS = ' + this.pps.PPSScore + '%?')) return;
       this.saving = true;
       try {
-        const r = await rpc('api_savePPS', this.$root.token, { ...this.pps, VisitID: this.selectedVisitId });
+        const r = await rpc('api_savePPS', window.LTCApp.token, { ...this.pps, VisitID: this.selectedVisitId });
         if (!r.success) { showError(r.message); return; }
         showSuccess(r.message);
         this.next();
@@ -726,7 +726,7 @@ function assessmentForm() {
       if (!await this._confirmSave_('บันทึก '+type+' = '+(type==='2Q'?this.q2Total:this.q9Total)+' คะแนน?')) return;
       this.saving = true;
       try {
-        const r = await rpc('api_saveMentalHealth', this.$root.token, payload);
+        const r = await rpc('api_saveMentalHealth', window.LTCApp.token, payload);
         if (!r.success) { showError(r.message); return; }
         if (r.data?.highRisk) {
           Swal.fire({ icon:'warning', title:'⚠️ ตรวจพบความเสี่ยงสูง',
@@ -746,7 +746,7 @@ function assessmentForm() {
       if (!await this._confirmSave_('บันทึกรายงานบริการ '+this.benefit.ServiceItems.length+' รายการ?')) return;
       this.saving = true;
       try {
-        const r = await rpc('api_saveBenefitReport', this.$root.token, {
+        const r = await rpc('api_saveBenefitReport', window.LTCApp.token, {
           PatientID: this.selectedPatientId,
           FiscalYear: this.benefit.FiscalYear,
           ReportMonth: this.benefit.ReportMonth,
@@ -756,7 +756,7 @@ function assessmentForm() {
         if (!r.success) { showError(r.message); return; }
         Swal.fire({ icon:'success', title:'🎉 ทำแบบประเมินครบแล้ว!',
                     text:r.message, confirmButtonText:'กลับหน้าหลัก' })
-            .then(()=> this.$root.showPage('dashboard'));
+            .then(()=> window.LTCApp.showPage('dashboard'));
       } catch (e) { showError(e.message); }
       finally { this.saving = false; }
     },
@@ -770,7 +770,7 @@ function assessmentForm() {
       const v = this.visits.find(x => x.VisitID === this.selectedVisitId);
       return v ? ('ครั้งที่ ' + v.VisitNo + ' · ' + this.formatDate(v.VisitDate)) : '-';
     },
-    formatDate(d) { return this.$root.formatThaiDate(d); },
+    formatDate(d) { return window.LTCApp.formatThaiDate(d); },
     thaiMonth(m) {
       return ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.',
               'ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][m];

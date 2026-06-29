@@ -172,9 +172,9 @@ function reportView() {
     orgName: '',
 
     async init() {
-      this.orgName = this.$root.appConfig?.ORG_NAME || '';
+      this.orgName = window.LTCApp.appConfig?.ORG_NAME || '';
       try {
-        const r = await rpc('api_getPatients', this.$root.token, {});
+        const r = await rpc('api_getPatients', window.LTCApp.token, {});
         if (r.success) {
           this.patients = r.data || [];
           this.villages = [...new Set(this.patients.map(p => p.VillageName || (p.VillageNo?'ม.'+p.VillageNo:'')).filter(v=>v))].sort();
@@ -198,7 +198,7 @@ function reportView() {
       if (this.reportType === 'individual') return; // ใช้ loadIndividual
       this.loading = true; this.fetched = false;
       try {
-        const r = await rpc('api_exportReport', this.$root.token, this.reportType, this.filter);
+        const r = await rpc('api_exportReport', window.LTCApp.token, this.reportType, this.filter);
         if (!r.success) { showError(r.message); return; }
         this.columns = r.data.columns || [];
         this.rows = r.data.rows || [];
@@ -212,7 +212,7 @@ function reportView() {
       if (!this.selectedPatientId) { this.individual = null; return; }
       this.loading = true;
       try {
-        const r = await rpc('api_getIndividualReport', this.$root.token, this.selectedPatientId);
+        const r = await rpc('api_getIndividualReport', window.LTCApp.token, this.selectedPatientId);
         if (!r.success) { showError(r.message); return; }
         this.individual = r.data;
       } catch (e) {
@@ -242,7 +242,7 @@ function reportView() {
     thaiMonth(m) {
       return ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][m];
     },
-    fmt(d) { return this.$root.formatThaiDate(d); }
+    fmt(d) { return window.LTCApp.formatThaiDate(d); }
   };
 }
 </script>

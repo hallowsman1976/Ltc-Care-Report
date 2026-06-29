@@ -412,7 +412,7 @@ function caseForm() {
     },
 
     get canCreate() {
-      const r = this.$root.user?.role;
+      const r = window.LTCApp.user?.role;
       return r === 'admin' || r === 'cm';
     },
 
@@ -423,7 +423,7 @@ function caseForm() {
     async loadPatients() {
       this.loading = true;
       try {
-        const r = await rpc('api_getPatients', this.$root.token, {});
+        const r = await rpc('api_getPatients', window.LTCApp.token, {});
         if (!r.success) { showError(r.message); return; }
         this.patients = r.data || [];
         this.applyFilter();
@@ -434,7 +434,7 @@ function caseForm() {
 
     async loadUsers() {
       try {
-        const r = await rpc('api_getCaregivers', this.$root.token);
+        const r = await rpc('api_getCaregivers', window.LTCApp.token);
         if (r.success) this.usersList = r.data || [];
       } catch (e) {}
     },
@@ -547,8 +547,8 @@ function caseForm() {
 
         const fn = this.editingId ? 'api_updatePatient' : 'api_savePatient';
         const args = this.editingId
-          ? [this.$root.token, this.editingId, payload]
-          : [this.$root.token, payload];
+          ? [window.LTCApp.token, this.editingId, payload]
+          : [window.LTCApp.token, payload];
         const r = await rpc(fn, ...args);
         if (!r.success) { showError(r.message); return; }
         showSuccess(r.message || 'บันทึกสำเร็จ');
@@ -563,7 +563,7 @@ function caseForm() {
       this.detail = { patient: p, timeline: [] };
       this.showDetail = true;
       try {
-        const r = await rpc('api_getPatientTimeline', this.$root.token, p.PatientID);
+        const r = await rpc('api_getPatientTimeline', window.LTCApp.token, p.PatientID);
         if (r.success) this.detail = r.data;
       } catch (e) {
         showError(e.message || 'โหลด timeline ไม่สำเร็จ');
@@ -623,7 +623,7 @@ function caseForm() {
               .filter(s => s).join(' ') || '-';
     },
 
-    formatThaiDate(iso) { return this.$root.formatThaiDate(iso); }
+    formatThaiDate(iso) { return window.LTCApp.formatThaiDate(iso); }
   };
 }
 </script>

@@ -88,7 +88,7 @@ function mapView() {
         }
       });
       // ถ้าเปิดหน้า map อยู่แล้ว
-      if (this.$root.page === 'map') {
+      if (window.LTCApp.page === 'map') {
         this.$nextTick(() => { this.ensureMap(); this.loadCases(); });
       } else {
         this.loading = false;
@@ -109,7 +109,7 @@ function mapView() {
     async loadCases() {
       this.loading = true;
       try {
-        const r = await rpc('api_getMapCases', this.$root.token, this.filter);
+        const r = await rpc('api_getMapCases', window.LTCApp.token, this.filter);
         if (!r.success) { showError(r.message); return; }
         this.cases = r.data.cases || [];
         this.counts = r.data.counts || {};

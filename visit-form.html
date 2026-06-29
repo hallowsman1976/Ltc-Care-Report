@@ -304,15 +304,15 @@ function visitForm() {
 
     async init() {
       // อัตโนมัติเติม visitor จาก user ที่ login
-      this.form.VisitorID = this.$root.user?.userId || '';
-      this.form.VisitorName = this.$root.user?.fullName || this.$root.user?.username || '';
+      this.form.VisitorID = window.LTCApp.user?.userId || '';
+      this.form.VisitorName = window.LTCApp.user?.fullName || window.LTCApp.user?.username || '';
       await this.loadPatients();
     },
 
     async loadPatients() {
       this.loading = true;
       try {
-        const r = await rpc('api_getPatients', this.$root.token, {});
+        const r = await rpc('api_getPatients', window.LTCApp.token, {});
         if (!r.success) { showError(r.message); return; }
         this.patients = r.data || [];
         this.filteredPatients = [...this.patients];
@@ -338,7 +338,7 @@ function visitForm() {
       this.showDropdown = false;
       // คำนวณ VisitNo อัตโนมัติ
       try {
-        const r = await rpc('api_calculateVisitNo', this.$root.token, p.PatientID);
+        const r = await rpc('api_calculateVisitNo', window.LTCApp.token, p.PatientID);
         if (r.success) this.visitNo = r.data.visitNo;
       } catch (e) { this.visitNo = '?'; }
     },
@@ -405,7 +405,7 @@ function visitForm() {
       let ok = 0;
       for (const ph of this.photos) {
         try {
-          const r = await rpc('api_uploadPhoto', this.$root.token,
+          const r = await rpc('api_uploadPhoto', window.LTCApp.token,
             ph.dataUrl, ph.name, this.selectedPatient.PatientID, visitId, '', true);
           if (r.success) ok++;
         } catch (e) { /* นับเฉพาะที่สำเร็จ */ }
@@ -447,7 +447,7 @@ function visitForm() {
       this.saving = true;
       try {
         const payload = { ...this.form, PatientID: this.selectedPatient.PatientID };
-        const r = await rpc('api_saveVisit', this.$root.token, payload);
+        const r = await rpc('api_saveVisit', window.LTCApp.token, payload);
         if (!r.success) { showError(r.message); return; }
 
         // ── อัปโหลดรูปที่แนบไว้ (ถ้ามี) ──
@@ -468,7 +468,7 @@ function visitForm() {
           confirmButtonColor:'#1d4ed8'
         }).then(res => {
           if (res.isConfirmed) {
-            this.$root.showPage('assessment');
+            window.LTCApp.showPage('assessment');
           } else {
             this.resetPatient();
           }
@@ -494,7 +494,7 @@ function visitForm() {
               p.Province?'จ.'+p.Province:''].filter(s=>s).join(' ') || '-';
     },
 
-    formatDate(d) { return this.$root.formatThaiDate(d); }
+    formatDate(d) { return window.LTCApp.formatThaiDate(d); }
   };
 }
 </script>
