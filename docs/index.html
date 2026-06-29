@@ -37,6 +37,11 @@
   <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+  <!-- flatpickr (Thai Buddhist-Era date picker) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/th.js"></script>
+
   <!-- Leaflet (Map) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
@@ -454,11 +459,11 @@ html, body {
 <div class="filter-bar">
   <div>
     <label class="form-label">📅 วันที่เริ่ม</label>
-    <input type="date" x-model="filter.dateFrom" class="form-input">
+    <input type="text" x-thdate="filter.dateFrom" class="form-input" placeholder="ตั้งแต่วันที่">
   </div>
   <div>
     <label class="form-label">📅 วันที่สิ้นสุด</label>
-    <input type="date" x-model="filter.dateTo" class="form-input">
+    <input type="text" x-thdate="filter.dateTo" class="form-input" placeholder="ถึงวันที่">
   </div>
   <div>
     <label class="form-label">🏘️ หมู่บ้าน</label>
@@ -866,7 +871,7 @@ html, body {
             </div>
             <div>
               <label class="form-label">วันเดือนปีเกิด</label>
-              <input type="date" x-model="form.BirthDate" class="form-input">
+              <input type="text" x-thdate="form.BirthDate" class="form-input" placeholder="เลือกวันเกิด">
               <p x-show="form.BirthDate" class="text-xs text-slate-400 mt-1">
                 อายุ <span class="font-semibold text-primary-700" x-text="calcAge(form.BirthDate)"></span> ปี
               </p>
@@ -990,7 +995,7 @@ html, body {
             </div>
             <div>
               <label class="form-label">วันที่ลงทะเบียน</label>
-              <input type="date" x-model="form.RegisterDate" class="form-input">
+              <input type="text" x-thdate="form.RegisterDate" class="form-input" placeholder="เลือกวันที่">
             </div>
             <div>
               <label class="form-label">สถานะ</label>
@@ -1456,7 +1461,7 @@ function caseForm() {
         </div>
         <div>
           <label class="form-label">วันที่เยี่ยม <span class="text-red-500">*</span></label>
-          <input type="date" x-model="form.VisitDate" class="form-input" required>
+          <input type="text" x-thdate="form.VisitDate" class="form-input" placeholder="เลือกวันที่เยี่ยม">
         </div>
         <div></div>
         <div>
@@ -1545,7 +1550,7 @@ function caseForm() {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="form-label">📅 นัดเยี่ยมครั้งถัดไป</label>
-            <input type="date" x-model="form.NextVisitDate" class="form-input">
+            <input type="text" x-thdate="form.NextVisitDate" class="form-input" placeholder="เลือกวันนัดครั้งหน้า">
           </div>
           <div class="flex items-end">
             <button type="button" @click="captureLocation()" class="btn btn-outline w-full">
@@ -3710,6 +3715,73 @@ function app() {
     }
   };
 }
+
+// ============================================================
+// ── Thai Buddhist-Era Date Picker (flatpickr) ───────────────
+//   ใช้:  <input type="text" x-thdate="form.BirthDate">
+//   - เก็บค่าใน model เป็น ISO (ค.ศ.) YYYY-MM-DD เหมือน type=date เดิม
+//   - แสดงผลในช่อง + ปฏิทิน + ปี เป็น พ.ศ. (ค.ศ.+543)
+// ============================================================
+const TH_MONTHS_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+/** _beHeader_() — เปลี่ยนปีบนหัวปฏิทินเป็น พ.ศ. (เก็บภายในเป็น ค.ศ.) */
+function _beHeader_(_sel, _str, fp) {
+  if (fp && fp.currentYearElement) fp.currentYearElement.value = fp.currentYear + 543;
+}
+
+document.addEventListener('alpine:init', () => {
+  if (!window.Alpine) return;
+  Alpine.directive('thdate', (el, { expression }, { evaluateLater, effect, cleanup }) => {
+    if (typeof window.flatpickr !== 'function') { console.warn('flatpickr ยังไม่โหลด'); return; }
+
+    const getVal = evaluateLater(expression);
+    const setRaw = evaluateLater(expression + ' = __thv');
+    const setVal = (v) => setRaw(() => {}, { scope: { __thv: v } });
+
+    const fp = window.flatpickr(el, {
+      locale: (window.flatpickr.l10ns && window.flatpickr.l10ns.th) ? window.flatpickr.l10ns.th : 'default',
+      altInput: true,
+      altInputClass: el.className,
+      altFormat: 'THAI',
+      dateFormat: 'Y-m-d',
+      allowInput: false,
+      disableMobile: true,
+      formatDate: (date, format) => {
+        if (format === 'THAI') {
+          return date.getDate() + ' ' + TH_MONTHS_SHORT[date.getMonth()] + ' ' + (date.getFullYear() + 543);
+        }
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        return date.getFullYear() + '-' + mm + '-' + dd;
+      },
+      onChange: (sel, str) => setVal(str || ''),
+      onReady: (sel, str, fp2) => {
+        _beHeader_(sel, str, fp2);
+        const y = fp2.currentYearElement;
+        if (y && !y._thWired) {
+          y._thWired = true;
+          // ผู้ใช้พิมพ์ปีเป็น พ.ศ. → แปลงกลับเป็น ค.ศ. ให้ flatpickr
+          y.addEventListener('input', () => {
+            const val = parseInt(y.value, 10);
+            if (!isNaN(val) && val > 2400) fp2.changeYear(val - 543);
+          });
+        }
+      },
+      onMonthChange: _beHeader_,
+      onYearChange: _beHeader_
+    });
+
+    // sync เมื่อค่าใน model เปลี่ยนจากภายนอก (เช่น openEdit โหลดข้อมูลเดิม)
+    effect(() => {
+      getVal(v => {
+        const iso = v || '';
+        if (iso !== (fp.input.value || '')) fp.setDate(iso || null, false);
+      });
+    });
+
+    cleanup(() => fp.destroy());
+  });
+});
 
 // ============================================================
 // ── Global Error Logging ────────────────────────────────────

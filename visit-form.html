@@ -103,7 +103,7 @@
         </div>
         <div>
           <label class="form-label">วันที่เยี่ยม <span class="text-red-500">*</span></label>
-          <input type="date" x-model="form.VisitDate" class="form-input" required>
+          <input type="text" x-thdate="form.VisitDate" class="form-input" placeholder="เลือกวันที่เยี่ยม">
         </div>
         <div></div>
         <div>
@@ -192,7 +192,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="form-label">📅 นัดเยี่ยมครั้งถัดไป</label>
-            <input type="date" x-model="form.NextVisitDate" class="form-input">
+            <input type="text" x-thdate="form.NextVisitDate" class="form-input" placeholder="เลือกวันนัดครั้งหน้า">
           </div>
           <div class="flex items-end">
             <button type="button" @click="captureLocation()" class="btn btn-outline w-full">
