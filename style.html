@@ -281,9 +281,24 @@ select.form-input { appearance: none;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── Brand app-icon tile (gradient ring glow, Apple-style) ── */
+.brand-tile {
+  position: relative;
+  background: linear-gradient(135deg, #ffffff, #e9f1ff);
+  box-shadow: 0 16px 38px -12px rgba(10,108,255,.55), inset 0 1px 0 rgba(255,255,255,.9);
+}
+.brand-tile::before {
+  content: ''; position: absolute; inset: -2.5px; border-radius: inherit; z-index: -1;
+  background: linear-gradient(135deg, #2e8bff 0%, #5e5ce6 50%, #34c759 100%);
+}
+
 /* ── Empty state ───────────────────────────────────────── */
 .empty-state { text-align: center; padding: 48px 20px; color: var(--muted); }
-.empty-state .icon { font-size: 50px; margin-bottom: 12px; opacity: .55; }
+.empty-state .icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 86px; height: 86px; margin: 0 auto 14px; border-radius: 50%; font-size: 40px;
+  background: radial-gradient(circle at 50% 32%, rgba(10,108,255,.12), rgba(94,92,230,.05));
+}
 
 /* ── Filter bar (glass) ────────────────────────────────── */
 .filter-bar {
