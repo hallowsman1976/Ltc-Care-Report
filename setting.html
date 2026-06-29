@@ -28,6 +28,8 @@
               class="px-4 py-2 border-b-2 font-semibold text-sm">🔔 แจ้งเตือน</button>
       <button @click="tab='users'; loadUsers()" :class="tab==='users'?'border-primary-600 text-primary-700':'border-transparent text-slate-500'"
               class="px-4 py-2 border-b-2 font-semibold text-sm">👥 ผู้ใช้</button>
+      <button @click="tab='import'" :class="tab==='import'?'border-primary-600 text-primary-700':'border-transparent text-slate-500'"
+              class="px-4 py-2 border-b-2 font-semibold text-sm">📥 นำเข้า</button>
     </div>
 
     <!-- Loading -->
@@ -214,6 +216,96 @@
       </div>
     </div>
 
+    <!-- ── TAB: Import ── -->
+    <div x-show="!loading && tab==='import'" class="space-y-4">
+
+      <!-- นำเข้าผู้สูงอายุ -->
+      <div class="card">
+        <div class="section-title">👵 นำเข้าผู้สูงอายุ (CSV)</div>
+        <ol class="text-xs text-slate-500 list-decimal ml-4 space-y-0.5 mb-3">
+          <li>กด "ดาวน์โหลด Template" แล้วกรอกข้อมูลใน Excel (มีตัวอย่าง 1 แถว — ลบออกก่อนนำเข้าจริง)</li>
+          <li>บันทึกเป็นไฟล์ <b>.csv</b> แล้วอัปโหลดกลับ</li>
+          <li>คอลัมน์ที่มี * จำเป็น · วันเกิดใส่ ค.ศ. รูปแบบ YYYY-MM-DD (พ.ศ. ระบบแปลงให้)</li>
+        </ol>
+        <div class="flex flex-wrap gap-3 items-center">
+          <button @click="downloadTemplate('patients')" class="btn btn-outline btn-sm">⬇️ ดาวน์โหลด Template</button>
+          <input type="file" accept=".csv,text/csv" @change="onImportFile('patients',$event)" class="text-sm text-slate-600">
+        </div>
+        <div x-show="impPatients.rows.length" class="mt-3">
+          <p class="text-sm">พบ <b class="text-primary-700" x-text="impPatients.rows.length"></b> รายการพร้อมนำเข้า</p>
+          <div class="max-h-40 overflow-auto border rounded-lg mt-2 text-xs">
+            <table class="w-full">
+              <thead class="bg-slate-50"><tr><th class="px-2 py-1 text-left">ชื่อ-นามสกุล</th><th class="px-2 py-1">เพศ</th><th class="px-2 py-1">หมู่บ้าน</th></tr></thead>
+              <tbody>
+                <template x-for="(r,i) in impPatients.rows.slice(0,20)" :key="i">
+                  <tr class="border-t"><td class="px-2 py-1" x-text="r.FullName"></td><td class="px-2 py-1 text-center" x-text="r.Sex"></td><td class="px-2 py-1 text-center" x-text="r.VillageName||r.VillageNo||'-'"></td></tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+          <button @click="runImport('patients')" class="btn btn-primary btn-sm mt-3" :disabled="impPatients.busy">
+            <span x-text="impPatients.busy?'กำลังนำเข้า...':'📥 นำเข้า '+impPatients.rows.length+' รายการ'"></span>
+          </button>
+        </div>
+        <template x-if="impPatients.result">
+          <div class="mt-3 text-sm space-y-2">
+            <div class="bg-green-50 border border-green-200 rounded-lg p-3" x-text="impPatients.result.message"></div>
+            <template x-if="impPatients.result.errors && impPatients.result.errors.length">
+              <div class="bg-red-50 border border-red-200 rounded-lg p-3 max-h-40 overflow-auto text-xs">
+                <div class="font-semibold mb-1">รายการที่ไม่สำเร็จ:</div>
+                <template x-for="e in impPatients.result.errors" :key="e.row">
+                  <div>แถว <span x-text="e.row"></span> <span x-text="e.name"></span> — <span x-text="e.message"></span></div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+
+      <!-- นำเข้าผู้ดูแล (CG) -->
+      <div class="card">
+        <div class="section-title">👩‍⚕️ นำเข้าผู้ดูแล (CG) (CSV)</div>
+        <ol class="text-xs text-slate-500 list-decimal ml-4 space-y-0.5 mb-3">
+          <li>กด "ดาวน์โหลด Template" แล้วกรอกข้อมูลใน Excel</li>
+          <li>username = a-z 0-9 _ . (3–30 ตัว, ห้ามซ้ำ) · รหัสผ่าน ≥ 6 ตัว</li>
+          <li>ทุกคนจะถูกสร้างเป็นบทบาท <b>ผู้ดูแล (CG)</b></li>
+        </ol>
+        <div class="flex flex-wrap gap-3 items-center">
+          <button @click="downloadTemplate('cg')" class="btn btn-outline btn-sm">⬇️ ดาวน์โหลด Template</button>
+          <input type="file" accept=".csv,text/csv" @change="onImportFile('cg',$event)" class="text-sm text-slate-600">
+        </div>
+        <div x-show="impCG.rows.length" class="mt-3">
+          <p class="text-sm">พบ <b class="text-primary-700" x-text="impCG.rows.length"></b> รายการพร้อมนำเข้า</p>
+          <div class="max-h-40 overflow-auto border rounded-lg mt-2 text-xs">
+            <table class="w-full">
+              <thead class="bg-slate-50"><tr><th class="px-2 py-1 text-left">username</th><th class="px-2 py-1 text-left">ชื่อ-นามสกุล</th><th class="px-2 py-1">โทรศัพท์</th></tr></thead>
+              <tbody>
+                <template x-for="(r,i) in impCG.rows.slice(0,20)" :key="i">
+                  <tr class="border-t"><td class="px-2 py-1 font-mono" x-text="r.username"></td><td class="px-2 py-1" x-text="r.fullName"></td><td class="px-2 py-1 text-center" x-text="r.phone||'-'"></td></tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+          <button @click="runImport('cg')" class="btn btn-primary btn-sm mt-3" :disabled="impCG.busy">
+            <span x-text="impCG.busy?'กำลังนำเข้า...':'📥 นำเข้า '+impCG.rows.length+' รายการ'"></span>
+          </button>
+        </div>
+        <template x-if="impCG.result">
+          <div class="mt-3 text-sm space-y-2">
+            <div class="bg-green-50 border border-green-200 rounded-lg p-3" x-text="impCG.result.message"></div>
+            <template x-if="impCG.result.errors && impCG.result.errors.length">
+              <div class="bg-red-50 border border-red-200 rounded-lg p-3 max-h-40 overflow-auto text-xs">
+                <div class="font-semibold mb-1">รายการที่ไม่สำเร็จ:</div>
+                <template x-for="e in impCG.result.errors" :key="e.row">
+                  <div>แถว <span x-text="e.row"></span> <span x-text="e.username"></span> — <span x-text="e.message"></span></div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+    </div>
+
     <!-- ── USER ADD/EDIT MODAL ── -->
     <div x-show="showUserForm" x-cloak
          class="fixed inset-0 bg-black/50 z-40 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
@@ -277,6 +369,35 @@
 </div>
 
 <script>
+// ── คอลัมน์ Template นำเข้า (หัวคอลัมน์ไทย → field) ──
+const PATIENT_IMPORT_COLS = [
+  { h: 'ชื่อ-นามสกุล*', f: 'FullName' },
+  { h: 'เพศ(ชาย/หญิง)*', f: 'Sex' },
+  { h: 'วันเกิด(YYYY-MM-DD)', f: 'BirthDate' },
+  { h: 'เลขบัตรประชาชน', f: 'CID' },
+  { h: 'HN', f: 'HN' },
+  { h: 'โทรศัพท์', f: 'Phone' },
+  { h: 'บ้านเลขที่', f: 'Address' },
+  { h: 'หมู่', f: 'VillageNo' },
+  { h: 'ชื่อหมู่บ้าน', f: 'VillageName' },
+  { h: 'ตำบล', f: 'Subdistrict' },
+  { h: 'อำเภอ', f: 'District' },
+  { h: 'จังหวัด', f: 'Province' },
+  { h: 'สิทธิ์การรักษา', f: 'RightType' },
+  { h: 'โรคประจำตัว', f: 'Disease' }
+];
+const PATIENT_IMPORT_EXAMPLE = ['สมหญิง สุขใจ','หญิง','1950-05-01','','','0898765432','12/3','5','บ้านสวน','ในเมือง','เมือง','เชียงใหม่','สิทธิ์บัตรทอง (UC)','เบาหวาน, ความดัน'];
+
+const CG_IMPORT_COLS = [
+  { h: 'username*', f: 'username' },
+  { h: 'รหัสผ่าน*', f: 'password' },
+  { h: 'ชื่อ-นามสกุล*', f: 'fullName' },
+  { h: 'ชื่อเล่น', f: 'nickName' },
+  { h: 'โทรศัพท์', f: 'phone' },
+  { h: 'อีเมล', f: 'email' }
+];
+const CG_IMPORT_EXAMPLE = ['cg_somchai','cg123456','สมชาย ใจดี','ชาย','0812345678','somchai@example.com'];
+
 function settingView() {
   return {
     tab: 'general',
@@ -290,6 +411,8 @@ function settingView() {
     notifications: [],
     customMsg: '',
     users: [], showUserForm: false, userSaving: false, uForm: {},
+    impPatients: { rows: [], result: null, busy: false },
+    impCG: { rows: [], result: null, busy: false },
 
     _loaded: false,
 
@@ -466,6 +589,71 @@ function settingView() {
     },
     roleBadge(role) {
       return ({ admin:'badge-red', cm:'badge-blue', cg:'badge-green', viewer:'badge-gray' })[role] || 'badge-gray';
+    },
+
+    // ── Import (CSV) ──
+    downloadTemplate(kind) {
+      const cols = kind === 'cg' ? CG_IMPORT_COLS : PATIENT_IMPORT_COLS;
+      const ex   = kind === 'cg' ? CG_IMPORT_EXAMPLE : PATIENT_IMPORT_EXAMPLE;
+      const esc = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+      const header = cols.map(c => esc(c.h)).join(',');
+      const row = ex.map(esc).join(',');
+      const csv = '﻿' + header + '\r\n' + row + '\r\n';  // BOM ให้ Excel อ่านไทยถูก
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = (kind === 'cg' ? 'template_caregivers' : 'template_patients') + '.csv';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(a.href);
+    },
+
+    onImportFile(kind, ev) {
+      const file = ev.target.files && ev.target.files[0];
+      ev.target.value = '';  // reset เพื่อเลือกไฟล์เดิมซ้ำได้
+      if (!file) return;
+      if (typeof Papa === 'undefined') { showError('ตัวอ่าน CSV ยังไม่พร้อม (PapaParse)'); return; }
+      const cols = kind === 'cg' ? CG_IMPORT_COLS : PATIENT_IMPORT_COLS;
+      const slot = kind === 'cg' ? this.impCG : this.impPatients;
+      slot.result = null;
+      Papa.parse(file, {
+        header: true, skipEmptyLines: true,
+        complete: (res) => {
+          const rows = [];
+          (res.data || []).forEach(raw => {
+            const o = {};
+            cols.forEach(c => { o[c.f] = String(raw[c.h] !== undefined && raw[c.h] !== null ? raw[c.h] : '').trim(); });
+            // วันเกิด พ.ศ. → ค.ศ.
+            if (o.BirthDate && /^\d{4}-\d{2}-\d{2}$/.test(o.BirthDate)) {
+              const y = parseInt(o.BirthDate.slice(0, 4), 10);
+              if (y > 2400) o.BirthDate = (y - 543) + o.BirthDate.slice(4);
+            }
+            const key = kind === 'cg' ? o.username : o.FullName;
+            if (key) rows.push(o);
+          });
+          slot.rows = rows;
+          if (!rows.length) showError('ไม่พบข้อมูลในไฟล์ — ตรวจว่าหัวคอลัมน์ตรงกับ Template');
+        },
+        error: (err) => showError('อ่านไฟล์ไม่สำเร็จ: ' + err.message)
+      });
+    },
+
+    async runImport(kind) {
+      const slot = kind === 'cg' ? this.impCG : this.impPatients;
+      if (!slot.rows.length) return;
+      const label = kind === 'cg' ? 'ผู้ดูแล (CG)' : 'ผู้สูงอายุ';
+      const ok = await showConfirm('นำเข้า' + label + '?', 'จะเพิ่ม ' + slot.rows.length + ' รายการเข้าระบบ');
+      if (!ok) return;
+      slot.busy = true; slot.result = null;
+      try {
+        const fn = kind === 'cg' ? 'api_importCaregivers' : 'api_importPatients';
+        const r = await rpc(fn, window.LTCApp.token, slot.rows);
+        if (!r.success) { showError(r.message); return; }
+        slot.result = Object.assign({ message: r.message }, r.data || {});
+        showSuccess(r.message);
+        slot.rows = [];
+        if (kind === 'cg') this.loadUsers();
+      } catch (e) { showError(e.message); }
+      finally { slot.busy = false; }
     },
 
     fmtDateTime(iso) {
