@@ -1,6 +1,9 @@
 # ── ไฟล์/โฟลเดอร์ที่ไม่ push ขึ้น Google Apps Script ──
 # build tooling (รันฝั่ง Node เท่านั้น)
 build-web.js
+build-css.js
+tailwind.config.js
+tailwind.input.css
 package.json
 package-lock.json
 node_modules/**

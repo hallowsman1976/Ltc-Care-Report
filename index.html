@@ -11,28 +11,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: { sans: ['-apple-system','BlinkMacSystemFont','Anuphan','Segoe UI','system-ui','sans-serif'] },
-          colors: {
-            primary: {
-              50:'#eef5ff', 100:'#dbe9ff', 200:'#bcd6ff', 300:'#8ebcff',
-              400:'#5a9bff', 500:'#2e83ff', 600:'#0a6cff', 700:'#0a57d8',
-              800:'#1a2138', 900:'#0f1424'
-            },
-            accent: {
-              50:'#ecfdf3', 100:'#d4f7e1', 200:'#a8eec3', 300:'#6fe09e',
-              400:'#34c759', 500:'#1f9d4d', 600:'#178043', 700:'#136636'
-            }
-          }
-        }
-      }
-    };
-  </script>
+  <!-- Tailwind CSS (production build — แทน Play CDN) -->
+  <?!= include('tailwindcss') ?>
 
   <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
