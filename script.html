@@ -383,6 +383,26 @@ document.addEventListener('alpine:init', () => {
       });
     });
   });
+
+  // ── 24-hour time picker: <input x-thtime="form.StartTime"> ──
+  Alpine.directive('thtime', (el, { expression }, { evaluateLater, effect, cleanup }) => {
+    if (typeof window.flatpickr !== 'function') { console.warn('flatpickr ยังไม่โหลด'); return; }
+    const getVal = evaluateLater(expression);
+    const setRaw = evaluateLater(expression + ' = __thv');
+    const setVal = (v) => setRaw(() => {}, { scope: { __thv: v } });
+    const fp = window.flatpickr(el, {
+      enableTime: true, noCalendar: true, dateFormat: 'H:i', time_24hr: true,
+      minuteIncrement: 1, allowInput: true, disableMobile: true,
+      onChange: (sel, str) => setVal(str || '')
+    });
+    effect(() => {
+      getVal(v => {
+        const s = v || '';
+        if (s !== (el.value || '')) fp.setDate(s || null, false);
+      });
+    });
+    cleanup(() => fp.destroy());
+  });
 });
 
 // ============================================================

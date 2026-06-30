@@ -1616,11 +1616,11 @@ function caseForm() {
         <div></div>
         <div>
           <label class="form-label">เวลาเริ่ม</label>
-          <input type="time" x-model="form.StartTime" class="form-input">
+          <input type="text" x-thtime="form.StartTime" class="form-input" placeholder="--:--">
         </div>
         <div>
           <label class="form-label">เวลาสิ้นสุด</label>
-          <input type="time" x-model="form.EndTime" class="form-input">
+          <input type="text" x-thtime="form.EndTime" class="form-input" placeholder="--:--">
         </div>
         <div class="col-span-2">
           <label class="form-label">👤 ผู้เยี่ยม</label>
@@ -4669,6 +4669,26 @@ document.addEventListener('alpine:init', () => {
         raf = requestAnimationFrame(tick);
       });
     });
+  });
+
+  // ── 24-hour time picker: <input x-thtime="form.StartTime"> ──
+  Alpine.directive('thtime', (el, { expression }, { evaluateLater, effect, cleanup }) => {
+    if (typeof window.flatpickr !== 'function') { console.warn('flatpickr ยังไม่โหลด'); return; }
+    const getVal = evaluateLater(expression);
+    const setRaw = evaluateLater(expression + ' = __thv');
+    const setVal = (v) => setRaw(() => {}, { scope: { __thv: v } });
+    const fp = window.flatpickr(el, {
+      enableTime: true, noCalendar: true, dateFormat: 'H:i', time_24hr: true,
+      minuteIncrement: 1, allowInput: true, disableMobile: true,
+      onChange: (sel, str) => setVal(str || '')
+    });
+    effect(() => {
+      getVal(v => {
+        const s = v || '';
+        if (s !== (el.value || '')) fp.setDate(s || null, false);
+      });
+    });
+    cleanup(() => fp.destroy());
   });
 });
 
