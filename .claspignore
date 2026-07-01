@@ -2,6 +2,7 @@
 # build tooling (รันฝั่ง Node เท่านั้น)
 build-web.js
 build-css.js
+ship.js
 tailwind.config.js
 tailwind.input.css
 package.json
