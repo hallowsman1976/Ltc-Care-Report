@@ -488,10 +488,16 @@ function api_getUpcomingVisits(token, days) {
 /**
  * api_getVisitOptions(token) — ตัวเลือกหน้าเยี่ยมบ้านจากชีต Symptom
  * A2:A = อาการ/ปัญหา · B2:B = การดูแล · C2:C = สุขศึกษา
- * @returns {Object} { success, data: { symptoms:[], care:[], education:[] } }
+ * D2:D = ปัญหาสิ่งแวดล้อม · E2:E = ปัญหาเรื่องยา · F2:F = ปัญหาโภชนาการ
+ * G2:G = ปัญหาการฟื้นฟู · H2:H = ปัญหาด้านจิตสังคม
+ * @returns {Object} { success, data: { symptoms, care, education, environment, medication, nutrition, rehabilitation, psychosocial } }
  */
 function api_getVisitOptions(token) {
   _CURRENT_TOKEN_ = token;
+  const empty = {
+    symptoms: [], care: [], education: [],
+    environment: [], medication: [], nutrition: [], rehabilitation: [], psychosocial: []
+  };
   try {
     requireAuth_();
     const ss = SpreadsheetApp.getActive();
@@ -501,16 +507,23 @@ function api_getVisitOptions(token) {
       const alt = ss.getSheets().filter(s => /symp?tom/i.test(s.getName()) && s.getLastRow() >= 2);
       if (alt.length) sh = alt[0];
     }
-    if (!sh) return okResult({ symptoms: [], care: [], education: [] }, 'ยังไม่มีชีต Symptom');
+    if (!sh) return okResult(empty, 'ยังไม่มีชีต Symptom');
     const lastRow = sh.getLastRow();
-    if (lastRow < 2) return okResult({ symptoms: [], care: [], education: [] }, 'ยังไม่มีข้อมูลตัวเลือก');
-    const values = sh.getRange(2, 1, lastRow - 1, 3).getValues();
+    if (lastRow < 2) return okResult(empty, 'ยังไม่มีข้อมูลตัวเลือก');
+    // อ่านเท่าที่มีจริง (กันกรณีชีตมีคอลัมน์น้อยกว่า 8)
+    const numCols = Math.min(8, sh.getLastColumn());
+    const values = sh.getRange(2, 1, lastRow - 1, numCols).getValues();
     const col = (i) => {
+      if (i >= numCols) return [];
       const seen = {};
       return values.map(r => String(r[i] == null ? '' : r[i]).trim())
                    .filter(v => v && !seen[v] && (seen[v] = true));
     };
-    return okResult({ symptoms: col(0), care: col(1), education: col(2) }, 'ตัวเลือกหน้าเยี่ยม');
+    return okResult({
+      symptoms: col(0), care: col(1), education: col(2),
+      environment: col(3), medication: col(4), nutrition: col(5),
+      rehabilitation: col(6), psychosocial: col(7)
+    }, 'ตัวเลือกหน้าเยี่ยม');
   } catch (err) {
     Logger.log('api_getVisitOptions error: ' + err.stack);
     return errResult(err.message);

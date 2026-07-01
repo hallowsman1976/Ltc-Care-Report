@@ -14,6 +14,14 @@ const APP_VERSION = '2.0.0';
 const SESSION_CACHE_KEY_PREFIX = 'ltc_session_';
 const SESSION_TTL_SECONDS = 8 * 60 * 60; // 8 ชั่วโมง
 
+// ── Password hashing ──
+// จำนวนรอบ HMAC-SHA256 ต่อ hash 1 ครั้ง
+// GAS ข้าม bridge JS↔Java ทุกรอบ → 10,000 รอบ = ~10-20 วินาที (login ช้ามาก)
+// 600 รอบ ~ 0.5-1 วินาที ยังคงความปลอดภัยพอสำหรับระบบภายใน
+// hash ที่ store จะฝังจำนวนรอบไว้ (v2$<rounds>$<hash>) จึงปรับค่านี้ได้โดยไม่กระทบ user เดิม
+const PASSWORD_HASH_ROUNDS = 600;
+const LEGACY_HASH_ROUNDS = 10000; // hash เก่าที่ไม่มี prefix ใช้ค่านี้
+
 // ── ชื่อ Sheet ทั้ง 13 ตาราง ──────────────────────────────
 const SHEET_NAMES = {
   SETTING:        'Setting',
@@ -282,7 +290,7 @@ function setupSheets() {
 
     if (!hasAdmin) {
       const salt = Utilities.getUuid();
-      const hash = _computeHash_('admin123', salt);
+      const hash = _encodeHash_('admin123', salt);
       const adminId = generateId('USR');
       const now = new Date().toISOString();
       userSheet.appendRow([
@@ -362,16 +370,44 @@ function _readSheetAsObjects_(sheet) {
 }
 
 /**
- * _computeHash_() — คำนวณ Password Hash (HMAC-SHA256 x 10,000 รอบ)
+ * _computeHash_() — คำนวณ Password Hash (HMAC-SHA256 x N รอบ)
+ * @param {string} password
+ * @param {string} salt
+ * @param {number} [rounds=LEGACY_HASH_ROUNDS] จำนวนรอบ (ต้องตรงกับตอน hash เพื่อ verify ได้)
  * @private
  */
-function _computeHash_(password, salt) {
+function _computeHash_(password, salt, rounds) {
+  const n = rounds || LEGACY_HASH_ROUNDS;
   let hash = password + salt;
-  for (let i = 0; i < 10000; i++) {
+  for (let i = 0; i < n; i++) {
     const bytes = Utilities.computeHmacSha256Signature(hash, salt);
     hash = Utilities.base64Encode(bytes);
   }
   return hash;
+}
+
+/**
+ * _encodeHash_() — สร้าง stored hash รูปแบบใหม่ที่ฝังจำนวนรอบ: v2$<rounds>$<hash>
+ * @private
+ */
+function _encodeHash_(password, salt) {
+  const rounds = PASSWORD_HASH_ROUNDS;
+  return 'v2$' + rounds + '$' + _computeHash_(password, salt, rounds);
+}
+
+/**
+ * _decodeHash_() — แยกจำนวนรอบและค่า hash จาก stored hash
+ * hash เก่า (ไม่มี prefix) => rounds = LEGACY_HASH_ROUNDS
+ * @returns {{rounds:number, raw:string}}
+ * @private
+ */
+function _decodeHash_(stored) {
+  const s = String(stored || '');
+  if (s.indexOf('v2$') === 0) {
+    const parts = s.split('$');
+    return { rounds: parseInt(parts[1], 10) || PASSWORD_HASH_ROUNDS, raw: parts.slice(2).join('$') };
+  }
+  return { rounds: LEGACY_HASH_ROUNDS, raw: s };
 }
 
 /**
@@ -408,7 +444,7 @@ function menuResetAdminPassword() {
       return;
     }
     const salt = Utilities.getUuid();
-    const hash = _computeHash_('admin123', salt);
+    const hash = _encodeHash_('admin123', salt);
     const headers = userSheet.getRange(1, 1, 1, userSheet.getLastColumn()).getValues()[0];
     const hashCol = headers.indexOf('PasswordHash') + 1;
     const saltCol = headers.indexOf('PasswordSalt') + 1;

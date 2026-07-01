@@ -24,7 +24,7 @@ function hashPassword(password) {
       return { success: false, data: null, message: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' };
     }
     const salt = Utilities.getUuid();
-    const hash = _computeHash_(password, salt);
+    const hash = _encodeHash_(password, salt);
     return { success: true, data: { hash, salt }, message: 'Hash รหัสผ่านสำเร็จ' };
   } catch (err) {
     Logger.log('hashPassword error: ' + err);
@@ -39,8 +39,9 @@ function hashPassword(password) {
 function verifyPassword(password, salt, expectedHash) {
   try {
     if (!password || !salt || !expectedHash) return false;
-    const computedHash = _computeHash_(password, salt);
-    return computedHash === expectedHash;
+    const { rounds, raw } = _decodeHash_(expectedHash);
+    const computedHash = _computeHash_(password, salt, rounds);
+    return computedHash === raw;
   } catch (err) {
     Logger.log('verifyPassword error: ' + err);
     return false;
@@ -108,10 +109,14 @@ function loginUser(username, password) {
 
     _CURRENT_TOKEN_ = token;
 
-    // ── อัปเดต LastLoginAt ──
-    updateData(SHEET_NAMES.USERS, 'UserID', user.UserID, {
-      LastLoginAt: new Date().toISOString()
-    });
+    // ── อัปเดต LastLoginAt (+ อัปเกรด hash เก่า 10,000 รอบ ให้เป็นแบบใหม่ที่เร็วขึ้น) ──
+    const patch = { LastLoginAt: new Date().toISOString() };
+    if (_decodeHash_(user.PasswordHash).rounds !== PASSWORD_HASH_ROUNDS) {
+      const newSalt = Utilities.getUuid();
+      patch.PasswordHash = _encodeHash_(password, newSalt);
+      patch.PasswordSalt = newSalt;
+    }
+    updateData(SHEET_NAMES.USERS, 'UserID', user.UserID, patch);
 
     // ── Audit Log ──
     writeAuditLog('LOGIN', 'auth', user.UserID, null, { username: u, role: user.Role });
