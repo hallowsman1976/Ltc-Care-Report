@@ -15,7 +15,7 @@
 
   --ink:    #1d1d1f;
   --ink-2:  #3a3a3c;
-  --muted:  #86868b;
+  --muted:  #6e6e73; /* darkened from #86868b for WCAG AA contrast on white */
 
   --brand:        #0a84ff;
   --brand-press:  #0060df;
@@ -127,13 +127,13 @@ nav[class*="border-t"][class*="bg-white"] {
 
 /* ── Forms ─────────────────────────────────────────────── */
 .form-label {
-  display: block; font-size: 12.5px; font-weight: 600;
+  display: block; font-size: 14px; font-weight: 600;
   color: var(--ink-2); margin-bottom: 7px; letter-spacing: -.01em;
 }
 .form-input {
-  width: 100%; padding: 11px 14px;
+  width: 100%; min-height: 46px; padding: 12px 14px;
   border: 1px solid #e3e6ea; border-radius: var(--r-md);
-  font-size: 14px; font-family: inherit; color: var(--ink);
+  font-size: 16px; font-family: inherit; color: var(--ink);
   background: #fcfcfd;
   transition: border-color .18s var(--ease), box-shadow .18s var(--ease), background .18s;
 }
@@ -148,11 +148,29 @@ select.form-input { appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%2386868b' d='M6 8 0 1.4 1.4 0 6 5.2 10.6 0 12 1.4z'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 14px center; padding-right: 38px; }
 
+/* ── Inline field validation ──────────────────────────────
+   Reason: toast-only errors get lost in a noisy clinic; users
+   need to see *which* field is wrong without re-reading a popup. */
+.form-input.input-error {
+  border-color: #e11d2e !important;
+  background: #fff6f6;
+}
+.form-input.input-error:focus { box-shadow: 0 0 0 4px rgba(225,29,46,.14); }
+.field-error {
+  display: flex; align-items: flex-start; gap: 4px;
+  font-size: 12.5px; font-weight: 500; color: #d2342a; margin-top: 6px;
+}
+/* Tom Select multi-selects don't accept .input-error directly (JS wraps
+   the <select> in .ts-wrapper), so the error class is toggled on the wrapper. */
+.ts-wrapper.input-error .ts-control {
+  border-color: #e11d2e !important; background: #fff6f6 !important;
+}
+
 /* ── Buttons ───────────────────────────────────────────── */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  padding: 10px 18px; border-radius: var(--r-md);
-  font-size: 14px; font-weight: 600; letter-spacing: -.01em;
+  min-height: 44px; padding: 11px 18px; border-radius: var(--r-md);
+  font-size: 15px; font-weight: 600; letter-spacing: -.01em;
   cursor: pointer; border: 1px solid transparent; font-family: inherit;
   white-space: nowrap; user-select: none;
   transition: transform .2s var(--spring), box-shadow .25s var(--ease), background .2s var(--ease), filter .2s;
@@ -171,8 +189,8 @@ select.form-input { appearance: none;
 .btn-danger:hover:not(:disabled) { filter: brightness(1.05); transform: translateY(-1px); }
 .btn-outline { background: rgba(10,132,255,.06); color: var(--brand); border: 1px solid rgba(10,132,255,.28); }
 .btn-outline:hover:not(:disabled) { background: rgba(10,132,255,.12); }
-.btn-lg { padding: 13px 24px; font-size: 15px; border-radius: var(--r-lg); }
-.btn-sm { padding: 7px 13px; font-size: 12.5px; border-radius: var(--r-sm); gap: 5px; }
+.btn-lg { min-height: 50px; padding: 14px 24px; font-size: 16px; border-radius: var(--r-lg); }
+.btn-sm { min-height: 38px; padding: 8px 14px; font-size: 13.5px; border-radius: var(--r-sm); gap: 5px; }
 
 /* ── Stat cards (dashboard) ────────────────────────────── */
 .stat-card {

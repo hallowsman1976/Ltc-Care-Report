@@ -158,6 +158,8 @@
           <div class="flex gap-1.5 flex-wrap">
             <template x-for="n in (item.max+1)">
               <button type="button" @click="adl[item.key] = n-1; calcADLTotal()"
+                      :aria-pressed="adl[item.key]==(n-1)"
+                      :aria-label="item.label+' คะแนน '+(n-1)"
                       :class="adl[item.key]==(n-1) ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-slate-600 border-slate-200'"
                       class="w-12 h-10 rounded-lg border-2 font-bold text-sm transition"
                       x-text="n-1"></button>
@@ -201,6 +203,8 @@
       <div class="grid grid-cols-6 sm:grid-cols-11 gap-1.5">
         <template x-for="n in 11">
           <button type="button" @click="pps.PPSScore = (11-n)*10; updatePPS()"
+                  :aria-pressed="pps.PPSScore===(11-n)*10"
+                  :aria-label="'PPS '+((11-n)*10)+'%'"
                   :class="pps.PPSScore===(11-n)*10 ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-slate-600 border-slate-200'"
                   class="h-12 rounded-lg border-2 font-bold text-sm transition"
                   x-text="(11-n)*10+'%'"></button>
@@ -292,9 +296,11 @@
           <div class="text-sm mb-2" x-text="(idx+1)+'. '+q"></div>
           <div class="flex gap-2">
             <button type="button" @click="mental['Q'+(idx+1)]='yes'; update2Q()"
+                    :aria-pressed="mental['Q'+(idx+1)]==='yes'"
                     :class="mental['Q'+(idx+1)]==='yes' ? 'bg-red-500 text-white border-red-500' : 'bg-white text-slate-600 border-slate-300'"
                     class="flex-1 py-3 rounded-xl border-2 font-semibold transition">✓ ใช่</button>
             <button type="button" @click="mental['Q'+(idx+1)]='no'; update2Q()"
+                    :aria-pressed="mental['Q'+(idx+1)]==='no'"
                     :class="mental['Q'+(idx+1)]==='no' ? 'bg-accent-500 text-white border-accent-500' : 'bg-white text-slate-600 border-slate-300'"
                     class="flex-1 py-3 rounded-xl border-2 font-semibold transition">✗ ไม่ใช่</button>
           </div>
@@ -332,7 +338,8 @@
       </template>
 
       <!-- ⚠️ Suicidal red alert -->
-      <div x-show="suicidalAlert" x-cloak class="mt-4 bg-red-600 text-white rounded-xl p-4 animate-pulse">
+      <div x-show="suicidalAlert" x-cloak role="alert" aria-live="assertive"
+           class="mt-4 bg-red-600 text-white rounded-xl p-4 animate-pulse">
         <div class="flex items-center gap-2 font-bold text-lg">🚨 ความเสี่ยงสูง!</div>
         <p class="text-sm mt-2">ตรวจพบความคิดทำร้ายตนเอง (Q9 > 0)</p>
         <ul class="text-xs mt-2 space-y-1 list-disc list-inside">

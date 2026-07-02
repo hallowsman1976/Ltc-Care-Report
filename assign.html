@@ -11,8 +11,8 @@
 
   <!-- Mode toggle -->
   <div class="flex gap-2 mb-4">
-    <button @click="setMode('cg')" :class="mode==='cg'?'btn-primary':'btn-secondary'" class="btn btn-sm">👩‍⚕️ ผู้ดูแล (CG)</button>
-    <button @click="setMode('cm')" :class="mode==='cm'?'btn-primary':'btn-secondary'" class="btn btn-sm">👨‍⚕️ Care Manager (CM)</button>
+    <button @click="setMode('cg')" :aria-pressed="mode==='cg'" :class="mode==='cg'?'btn-primary':'btn-secondary'" class="btn btn-sm">👩‍⚕️ ผู้ดูแล (CG)</button>
+    <button @click="setMode('cm')" :aria-pressed="mode==='cm'" :class="mode==='cm'?'btn-primary':'btn-secondary'" class="btn btn-sm">👨‍⚕️ Care Manager (CM)</button>
   </div>
 
   <!-- Loading -->
@@ -22,7 +22,9 @@
   <div x-show="!loading" class="card p-0 overflow-hidden mb-4">
     <div class="px-4 py-3 border-b flex items-center justify-between">
       <span class="font-bold text-sm" x-text="'📊 สรุปภาระงาน — ' + (mode==='cg'?'ผู้ดูแล (CG)':'Care Manager (CM)')"></span>
-      <button @click="reload()" class="btn btn-secondary btn-sm">🔄</button>
+      <button @click="reload()" class="btn btn-secondary btn-sm" aria-label="รีเฟรชข้อมูล">
+        <span aria-hidden="true">🔄</span>
+      </button>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">

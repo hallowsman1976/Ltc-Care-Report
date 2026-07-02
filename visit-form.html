@@ -124,16 +124,26 @@
         </div>
         <div>
           <label class="form-label">วันที่เยี่ยม <span class="text-red-500">*</span></label>
-          <input type="text" x-thdate="form.VisitDate" class="form-input" placeholder="เลือกวันที่เยี่ยม">
+          <input type="text" x-thdate="form.VisitDate" class="form-input"
+                 :class="errors.VisitDate ? 'input-error' : ''" :aria-invalid="!!errors.VisitDate"
+                 placeholder="เลือกวันที่เยี่ยม">
+          <p x-show="errors.VisitDate" role="alert" class="field-error">
+            <span aria-hidden="true">⚠️</span><span x-text="errors.VisitDate"></span>
+          </p>
         </div>
         <div></div>
         <div>
-          <label class="form-label">เวลาเริ่ม</label>
-          <input type="text" x-thtime="form.StartTime" class="form-input" placeholder="--:--">
+          <label class="form-label">เวลาเริ่ม <span class="text-xs text-slate-400 font-normal">(24 ชม. เช่น 14:30)</span></label>
+          <input type="text" x-thtime="form.StartTime" class="form-input"
+                 :class="errors.Time ? 'input-error' : ''" placeholder="--:--">
         </div>
         <div>
-          <label class="form-label">เวลาสิ้นสุด</label>
-          <input type="text" x-thtime="form.EndTime" class="form-input" placeholder="--:--">
+          <label class="form-label">เวลาสิ้นสุด <span class="text-xs text-slate-400 font-normal">(24 ชม. เช่น 16:00)</span></label>
+          <input type="text" x-thtime="form.EndTime" class="form-input"
+                 :class="errors.Time ? 'input-error' : ''" placeholder="--:--">
+          <p x-show="errors.Time" role="alert" class="field-error">
+            <span aria-hidden="true">⚠️</span><span x-text="errors.Time"></span>
+          </p>
         </div>
         <div class="col-span-2">
           <label class="form-label">👤 ผู้เยี่ยม</label>
@@ -147,8 +157,13 @@
       <div class="section-title">🩺 อาการและการดูแล</div>
       <div class="space-y-3">
         <div>
-          <label class="form-label">อาการหลัก / ปัญหาที่พบ <span class="text-red-500">*</span></label>
-          <select multiple x-ref="selSymptom" placeholder="เลือก/พิมพ์อาการ (เลือกได้หลายรายการ)"></select>
+          <label class="form-label">อาการหลัก / ปัญหาที่พบ <span class="text-red-500">*</span>
+            <span class="text-xs text-slate-400 font-normal">(เลือกได้มากกว่า 1 รายการ)</span>
+          </label>
+          <select multiple x-ref="selSymptom" placeholder="แตะเพื่อเลือกอาการ (เลือกได้หลายรายการ)"></select>
+          <p x-show="errors.MainProblem" role="alert" class="field-error">
+            <span aria-hidden="true">⚠️</span><span x-text="errors.MainProblem"></span>
+          </p>
         </div>
         <div>
           <label class="form-label">การดูแลที่ให้</label>
@@ -299,6 +314,7 @@ function visitForm() {
     saving: false,
     loading: true,
     form: {},
+    errors: {},          // field-level inline validation messages
     photos: [],         // {name, mime, dataUrl}
     pdpaConsent: false,
 
@@ -432,6 +448,8 @@ function visitForm() {
       this.form.VisitorName = visitorName;
       this.photos = [];
       this.pdpaConsent = false;
+      this.errors = {};
+      this._markSelectError('selSymptom', false);
       this.clearVisitSelects();
     },
 
@@ -505,12 +523,33 @@ function visitForm() {
       );
     },
 
+    /** ใส่/ล้างกรอบสีแดงบน Tom Select wrapper (ปกติ .input-error ใช้ไม่ได้ตรงๆ กับ <select>) */
+    _markSelectError(refName, hasError) {
+      const el = this.$refs[refName];
+      const wrap = el && el.closest('.ts-wrapper');
+      if (wrap) wrap.classList.toggle('input-error', !!hasError);
+    },
+
+    validate() {
+      this.errors = {};
+      if (!this.form.VisitDate) this.errors.VisitDate = 'กรุณาเลือกวันที่เยี่ยม';
+      if (!this.form.MainProblem) this.errors.MainProblem = 'กรุณาเลือกอาการหลัก/ปัญหาที่พบอย่างน้อย 1 รายการ';
+      if (this.form.StartTime && this.form.EndTime && this.form.StartTime > this.form.EndTime) {
+        this.errors.Time = 'เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่ม';
+      }
+      this._markSelectError('selSymptom', this.errors.MainProblem);
+      return Object.keys(this.errors).length === 0;
+    },
+
     async submit() {
       if (!this.selectedPatient) { showError('กรุณาเลือกผู้รับบริการ'); return; }
-      if (!this.form.VisitDate)  { showError('กรุณาระบุวันที่เยี่ยม'); return; }
-      if (!this.form.MainProblem) { showError('กรุณาระบุอาการหลัก/ปัญหาที่พบ'); return; }
-      if (this.form.StartTime && this.form.EndTime && this.form.StartTime > this.form.EndTime) {
-        showError('เวลาสิ้นสุดต้องหลังเวลาเริ่ม'); return;
+      if (!this.validate()) {
+        showError('กรุณาตรวจสอบข้อมูลในช่องที่ทำเครื่องหมายสีแดง');
+        this.$nextTick(() => {
+          const badEl = this.$root.querySelector('.input-error, .ts-wrapper.input-error');
+          if (badEl) badEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+        return;
       }
 
       const ok = await showConfirm(

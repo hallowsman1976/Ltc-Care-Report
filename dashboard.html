@@ -13,8 +13,9 @@
       </span>
     </p>
   </div>
-  <button @click="loadDashboard()" class="btn btn-secondary btn-sm" :disabled="dashboardLoading">
-    <span x-text="dashboardLoading ? '⏳' : '🔄'"></span>
+  <button @click="loadDashboard()" class="btn btn-secondary btn-sm" :disabled="dashboardLoading"
+          aria-label="รีเฟรชข้อมูล">
+    <span aria-hidden="true" x-text="dashboardLoading ? '⏳' : '🔄'"></span>
     <span class="hidden sm:inline">รีเฟรช</span>
   </button>
 </div>

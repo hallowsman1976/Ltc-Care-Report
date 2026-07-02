@@ -69,29 +69,34 @@
 
         <form @submit.prevent="doLogin()" class="space-y-4">
           <div>
-            <label class="form-label">ชื่อผู้ใช้</label>
-            <input type="text" x-model="loginForm.username" class="form-input"
+            <label class="form-label" for="login-username">ชื่อผู้ใช้</label>
+            <input id="login-username" type="text" x-model="loginForm.username" class="form-input"
+                   :class="loginError ? 'input-error' : ''" :aria-invalid="!!loginError"
                    placeholder="username" autocomplete="username" autocapitalize="off"
                    :disabled="loginLoading" required>
           </div>
 
           <div>
-            <label class="form-label">รหัสผ่าน</label>
+            <label class="form-label" for="login-password">รหัสผ่าน</label>
             <div class="relative">
-              <input :type="showPass ? 'text' : 'password'"
-                     x-model="loginForm.password" class="form-input pr-12"
+              <input id="login-password" :type="showPass ? 'text' : 'password'"
+                     x-model="loginForm.password" class="form-input pr-14"
+                     :class="loginError ? 'input-error' : ''" :aria-invalid="!!loginError"
                      placeholder="••••••••" autocomplete="current-password"
                      :disabled="loginLoading" required>
               <button type="button" @click="showPass = !showPass"
-                      class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-lg">
-                <span x-text="showPass ? '🙈' : '👁️'"></span>
+                      :aria-label="showPass ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'"
+                      :aria-pressed="showPass"
+                      class="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center
+                             rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 text-lg">
+                <span aria-hidden="true" x-text="showPass ? '🙈' : '👁️'"></span>
               </button>
             </div>
           </div>
 
-          <div x-show="loginError"
+          <div x-show="loginError" role="alert" aria-live="assertive"
                class="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl flex gap-2 items-start">
-            <span>⚠️</span>
+            <span aria-hidden="true">⚠️</span>
             <span x-text="loginError"></span>
           </div>
 
