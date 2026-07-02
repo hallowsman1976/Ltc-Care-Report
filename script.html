@@ -56,7 +56,7 @@ function showSuccess(message) {
 function showError(message) {
   Swal.fire({
     icon: 'error', title: 'เกิดข้อผิดพลาด',
-    text: message || 'ไม่ทราบสาเหตุ', confirmButtonColor: '#1d4ed8',
+    text: message || 'ไม่ทราบสาเหตุ', confirmButtonColor: '#0B5250',
     confirmButtonText: 'ตกลง'
   });
 }
@@ -67,7 +67,7 @@ function showConfirm(title, text) {
     title: title || 'ยืนยัน?', text: text || '',
     icon: 'question', showCancelButton: true,
     confirmButtonText: 'ตกลง', cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#1d4ed8', cancelButtonColor: '#64748b'
+    confirmButtonColor: '#0B5250', cancelButtonColor: '#64748b'
   }).then(r => r.isConfirmed);
 }
 
